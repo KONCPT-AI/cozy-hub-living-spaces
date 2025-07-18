@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+import ProtectedUserRoute from "./components/ProtectedUserRoute";
 
 // Public Website Pages
 import Index from "./pages/Index";
@@ -64,13 +65,41 @@ const App = () => (
             <Route path="/admin-login" element={<AdminLogin />} />
 
             {/* User Portal Routes */}
-            <Route path="/user/dashboard" element={<UserDashboard />} />
-            <Route path="/user/profile" element={<UserProfile />} />
-            <Route path="/user/rooms" element={<BrowseRooms />} />
-            <Route path="/user/bookings" element={<MyBookings />} />
-            <Route path="/user/payments" element={<Payments />} />
-            <Route path="/user/support" element={<Support />} />
-            <Route path="/user/events" element={<UserEvents />} />
+            <Route path="/user/dashboard" element={
+              <ProtectedUserRoute>
+                <UserDashboard />
+              </ProtectedUserRoute>
+            } />
+            <Route path="/user/profile" element={
+              <ProtectedUserRoute>
+                <UserProfile />
+              </ProtectedUserRoute>
+            } />
+            <Route path="/user/rooms" element={
+              <ProtectedUserRoute>
+                <BrowseRooms />
+              </ProtectedUserRoute>
+            } />
+            <Route path="/user/bookings" element={
+              <ProtectedUserRoute>
+                <MyBookings />
+              </ProtectedUserRoute>
+            } />
+            <Route path="/user/payments" element={
+              <ProtectedUserRoute>
+                <Payments />
+              </ProtectedUserRoute>
+            } />
+            <Route path="/user/support" element={
+              <ProtectedUserRoute>
+                <Support />
+              </ProtectedUserRoute>
+            } />
+            <Route path="/user/events" element={
+              <ProtectedUserRoute>
+                <UserEvents />
+              </ProtectedUserRoute>
+            } />
 
             {/* Protected Admin Dashboard Routes */}
             <Route path="/admin/dashboard" element={

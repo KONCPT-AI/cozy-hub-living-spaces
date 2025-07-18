@@ -3,7 +3,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Search, 
   Filter,
@@ -19,115 +21,73 @@ import {
   DollarSign
 } from 'lucide-react';
 
+interface Room {
+  id: string;
+  room_number: string;
+  room_type: string;
+  price_per_month: number;
+  deposit_amount: number;
+  capacity: number;
+  current_occupancy: number;
+  floor_number?: number;
+  is_available: boolean;
+  description?: string;
+  amenities?: string[];
+  images?: string[];
+  preferred_user_type?: string;
+}
+
 const BrowseRooms = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [priceRange, setPriceRange] = useState('all');
-  const [favorites, setFavorites] = useState<number[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const rooms = [
-    {
-      id: 1,
-      name: 'Modern Studio in Downtown',
-      location: 'Downtown District',
-      price: 850,
-      originalPrice: 900,
-      rating: 4.8,
-      reviews: 24,
-      type: 'Private',
-      occupancy: '1 person',
-      amenities: ['WiFi', 'Parking', 'Common Area', 'Security'],
-      image: 'photo-1721322800607-8c38375eef04',
-      availability: 'Available Now',
-      preferredFor: 'Professional',
-      description: 'Spacious studio with modern amenities in the heart of downtown.'
-    },
-    {
-      id: 2,
-      name: 'Shared Room near University',
-      location: 'University Area',
-      price: 650,
-      originalPrice: 700,
-      rating: 4.6,
-      reviews: 18,
-      type: 'Shared',
-      occupancy: '2 people',
-      amenities: ['WiFi', 'Study Room', 'Events', 'Security'],
-      image: 'photo-1649972904349-6e44c42644a7',
-      availability: 'Available Feb 1',
-      preferredFor: 'Student',
-      description: 'Perfect for students with study areas and community events.'
-    },
-    {
-      id: 3,
-      name: 'Premium Suite with City View',
-      location: 'Business District',
-      price: 1200,
-      originalPrice: 1300,
-      rating: 4.9,
-      reviews: 31,
-      type: 'Private',
-      occupancy: '1 person',
-      amenities: ['WiFi', 'Parking', 'Gym', 'Coworking', 'Rooftop'],
-      image: 'photo-1488590528505-98d2b5aba04b',
-      availability: 'Available Now',
-      preferredFor: 'Professional',
-      description: 'Luxury suite with panoramic city views and premium amenities.'
-    },
-    {
-      id: 4,
-      name: 'Cozy Room in Student Hub',
-      location: 'University Area',
-      price: 550,
-      originalPrice: 600,
-      rating: 4.5,
-      reviews: 15,
-      type: 'Shared',
-      occupancy: '3 people',
-      amenities: ['WiFi', 'Study Room', 'Library', 'Events'],
-      image: 'photo-1483058712412-4245e9b90334',
-      availability: 'Available Jan 20',
-      preferredFor: 'Student',
-      description: 'Budget-friendly option with great community vibes.'
-    },
-    {
-      id: 5,
-      name: 'Executive Room with Office',
-      location: 'Business District',
-      price: 950,
-      originalPrice: 1000,
-      rating: 4.7,
-      reviews: 22,
-      type: 'Private',
-      occupancy: '1 person',
-      amenities: ['WiFi', 'Parking', 'Office Space', 'Concierge'],
-      image: 'photo-1721322800607-8c38375eef04',
-      availability: 'Available Now',
-      preferredFor: 'Professional',
-      description: 'Perfect for working professionals with dedicated office space.'
-    },
-    {
-      id: 6,
-      name: 'Shared Apartment with Balcony',
-      location: 'Residential Area',
-      price: 750,
-      originalPrice: 800,
-      rating: 4.4,
-      reviews: 12,
-      type: 'Shared',
-      occupancy: '2 people',
-      amenities: ['WiFi', 'Balcony', 'Garden', 'Pet Friendly'],
-      image: 'photo-1649972904349-6e44c42644a7',
-      availability: 'Available Feb 15',
-      preferredFor: 'Both',
-      description: 'Peaceful location with outdoor space and pet-friendly policy.'
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  const fetchRooms = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('is_available', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching rooms:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load rooms. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setRooms(data || []);
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load rooms. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const typeFilters = [
     { label: 'All Types', value: 'all' },
-    { label: 'Private Room', value: 'Private' },
-    { label: 'Shared Room', value: 'Shared' },
+    { label: 'Single', value: 'single' },
+    { label: 'Double', value: 'double' },
+    { label: 'Triple', value: 'triple' },
+    { label: 'Quad', value: 'quad' },
   ];
 
   const priceFilters = [
@@ -138,7 +98,7 @@ const BrowseRooms = () => {
     { label: 'Above $1200', value: 'above-1200' },
   ];
 
-  const toggleFavorite = (roomId: number) => {
+  const toggleFavorite = (roomId: string) => {
     setFavorites(prev => 
       prev.includes(roomId) 
         ? prev.filter(id => id !== roomId)
@@ -146,15 +106,31 @@ const BrowseRooms = () => {
     );
   };
 
+  const handleViewRoom = (roomId: string) => {
+    // For now, show a toast. Later this will navigate to room details
+    toast({
+      title: "Room Details",
+      description: "Room details page coming soon!",
+    });
+  };
+
+  const handleBookRoom = (roomId: string) => {
+    // For now, show a toast. Later this will open booking modal
+    toast({
+      title: "Book Room",
+      description: "Booking functionality coming soon!",
+    });
+  };
+
   const filteredRooms = rooms.filter(room => {
-    const matchesSearch = room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         room.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'all' || room.type === selectedType;
+    const matchesSearch = room.room_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (room.description && room.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesType = selectedType === 'all' || room.room_type === selectedType;
     const matchesPrice = priceRange === 'all' || 
-      (priceRange === 'under-700' && room.price < 700) ||
-      (priceRange === '700-900' && room.price >= 700 && room.price <= 900) ||
-      (priceRange === '900-1200' && room.price > 900 && room.price <= 1200) ||
-      (priceRange === 'above-1200' && room.price > 1200);
+      (priceRange === 'under-700' && room.price_per_month < 700) ||
+      (priceRange === '700-900' && room.price_per_month >= 700 && room.price_per_month <= 900) ||
+      (priceRange === '900-1200' && room.price_per_month > 900 && room.price_per_month <= 1200) ||
+      (priceRange === 'above-1200' && room.price_per_month > 1200);
     
     return matchesSearch && matchesType && matchesPrice;
   });
@@ -225,96 +201,128 @@ const BrowseRooms = () => {
           </p>
         </div>
 
-        {/* Rooms Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRooms.map((room) => (
-            <Card key={room.id} className="overflow-hidden border-0 shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1">
-              <div className="relative">
-                <img 
-                  src={`https://images.unsplash.com/${room.image}?w=400&h=250&fit=crop`}
-                  alt={room.name}
-                  className="w-full h-48 object-cover"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`absolute top-2 right-2 h-8 w-8 p-0 bg-background/80 ${
-                    favorites.includes(room.id) ? 'text-red-500' : 'text-muted-foreground'
-                  }`}
-                  onClick={() => toggleFavorite(room.id)}
-                >
-                  <Heart className={`h-4 w-4 ${favorites.includes(room.id) ? 'fill-current' : ''}`} />
-                </Button>
-                <Badge className="absolute top-2 left-2 bg-secondary text-secondary-foreground">
-                  {room.availability}
-                </Badge>
-                <Badge className="absolute bottom-2 right-2 bg-background/90 text-foreground">
-                  {room.preferredFor}
-                </Badge>
-              </div>
-              
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg line-clamp-1">{room.name}</h3>
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-secondary fill-current" />
-                    <span className="text-sm font-medium">{room.rating}</span>
-                    <span className="text-sm text-muted-foreground">({room.reviews})</span>
+        {/* Loading State */}
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, index) => (
+              <Card key={index} className="overflow-hidden border-0 shadow-soft">
+                <div className="w-full h-48 bg-muted animate-pulse"></div>
+                <CardContent className="p-4">
+                  <div className="h-4 bg-muted animate-pulse mb-2"></div>
+                  <div className="h-4 bg-muted animate-pulse mb-2 w-3/4"></div>
+                  <div className="h-4 bg-muted animate-pulse mb-4 w-1/2"></div>
+                  <div className="flex justify-between">
+                    <div className="h-6 bg-muted animate-pulse w-20"></div>
+                    <div className="h-8 bg-muted animate-pulse w-16"></div>
                   </div>
-                </div>
-                
-                <div className="flex items-center text-muted-foreground mb-2">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  <span className="text-sm">{room.location}</span>
-                </div>
-                
-                <div className="flex items-center text-muted-foreground mb-3">
-                  <Users className="h-4 w-4 mr-1" />
-                  <span className="text-sm">{room.type} • {room.occupancy}</span>
-                </div>
-                
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                  {room.description}
-                </p>
-                
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {room.amenities.slice(0, 3).map((amenity, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {amenity}
-                    </Badge>
-                  ))}
-                  {room.amenities.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{room.amenities.length - 3} more
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Rooms Grid */}
+        {!loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredRooms.map((room) => (
+              <Card key={room.id} className="overflow-hidden border-0 shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1">
+                <div className="relative">
+                  <img 
+                    src={room.images && room.images.length > 0 
+                      ? room.images[0] 
+                      : `https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&h=250&fit=crop`}
+                    alt={`Room ${room.room_number}`}
+                    className="w-full h-48 object-cover"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`absolute top-2 right-2 h-8 w-8 p-0 bg-background/80 ${
+                      favorites.includes(room.id) ? 'text-red-500' : 'text-muted-foreground'
+                    }`}
+                    onClick={() => toggleFavorite(room.id)}
+                  >
+                    <Heart className={`h-4 w-4 ${favorites.includes(room.id) ? 'fill-current' : ''}`} />
+                  </Button>
+                  <Badge className="absolute top-2 left-2 bg-secondary text-secondary-foreground">
+                    {room.is_available ? 'Available' : 'Occupied'}
+                  </Badge>
+                  {room.preferred_user_type && (
+                    <Badge className="absolute bottom-2 right-2 bg-background/90 text-foreground">
+                      {room.preferred_user_type}
                     </Badge>
                   )}
                 </div>
                 
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="text-2xl font-bold text-secondary">${room.price}</span>
-                    <span className="text-sm text-muted-foreground">/month</span>
-                    {room.originalPrice > room.price && (
-                      <div className="text-sm text-muted-foreground line-through">
-                        ${room.originalPrice}
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-lg line-clamp-1">Room {room.room_number}</h3>
+                    <Badge variant="outline" className="text-xs">
+                      {room.room_type}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center text-muted-foreground mb-2">
+                    <Users className="h-4 w-4 mr-1" />
+                    <span className="text-sm">
+                      {room.current_occupancy}/{room.capacity} occupied
+                      {room.floor_number && ` • Floor ${room.floor_number}`}
+                    </span>
+                  </div>
+                  
+                  {room.description && (
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      {room.description}
+                    </p>
+                  )}
+                  
+                  {room.amenities && room.amenities.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-4">
+                      {room.amenities.slice(0, 3).map((amenity, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {amenity}
+                        </Badge>
+                      ))}
+                      {room.amenities.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{room.amenities.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-2xl font-bold text-secondary">${room.price_per_month}</span>
+                      <span className="text-sm text-muted-foreground">/month</span>
+                      <div className="text-sm text-muted-foreground">
+                        Deposit: ${room.deposit_amount}
                       </div>
-                    )}
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewRoom(room.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      <Button 
+                        size="sm"
+                        onClick={() => handleBookRoom(room.id)}
+                        disabled={!room.is_available || room.current_occupancy >= room.capacity}
+                      >
+                        <Calendar className="h-4 w-4 mr-1" />
+                        Book
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button size="sm">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      Book
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Load More */}
         {filteredRooms.length > 0 && (
