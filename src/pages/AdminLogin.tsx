@@ -19,7 +19,7 @@ const AdminLogin = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const success = await login(email, password, 'admin');
+    const success = await login(email, password);
     
     if (success) {
       toast({
@@ -37,7 +37,7 @@ const AdminLogin = () => {
   };
 
   const handleDemoLogin = async () => {
-    const success = await login('admin@demo.com', 'admin123', 'admin');
+    const success = await login('admin@demo.com', 'admin123');
     
     if (success) {
       toast({
