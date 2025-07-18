@@ -1,9 +1,9 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Home, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -12,7 +12,6 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [userType, setUserType] = useState<'student' | 'professional'>('student');
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -20,9 +19,9 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const success = await login(email, password, 'user');
+    const result = await login(email, password);
     
-    if (success) {
+    if (result.success) {
       toast({
         title: 'Welcome back!',
         description: 'You have successfully logged in.',
@@ -31,28 +30,9 @@ const Login = () => {
     } else {
       toast({
         title: 'Login failed',
-        description: 'Invalid email or password. Please try again.',
+        description: result.error || 'Invalid email or password. Please try again.',
         variant: 'destructive',
       });
-    }
-  };
-
-  const handleDemoLogin = async (type: 'student' | 'professional') => {
-    const demoCredentials = {
-      student: { email: 'student@demo.com', password: 'demo123' },
-      professional: { email: 'professional@demo.com', password: 'demo123' }
-    };
-
-    const { email: demoEmail, password: demoPassword } = demoCredentials[type];
-    
-    const success = await login(demoEmail, demoPassword, 'user');
-    
-    if (success) {
-      toast({
-        title: `Welcome, ${type}!`,
-        description: 'You have successfully logged in with demo account.',
-      });
-      navigate('/user/dashboard');
     }
   };
 
@@ -76,62 +56,6 @@ const Login = () => {
             <p className="text-muted-foreground">Enter your credentials to access your account</p>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* User Type Selection */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium">I am a:</label>
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant={userType === 'student' ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={() => setUserType('student')}
-                >
-                  Student
-                </Button>
-                <Button
-                  type="button"
-                  variant={userType === 'professional' ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={() => setUserType('professional')}
-                >
-                  Professional
-                </Button>
-              </div>
-            </div>
-
-            {/* Demo Accounts */}
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-center">Try Demo Accounts:</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleDemoLogin('student')}
-                  disabled={isLoading}
-                >
-                  <Badge variant="secondary" className="mr-2">Demo</Badge>
-                  Student
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleDemoLogin('professional')}
-                  disabled={isLoading}
-                >
-                  <Badge variant="secondary" className="mr-2">Demo</Badge>
-                  Professional
-                </Button>
-              </div>
-              <div className="text-xs text-muted-foreground text-center">
-                Student: student@demo.com / demo123<br />
-                Professional: professional@demo.com / demo123
-              </div>
-            </div>
-
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
@@ -181,9 +105,6 @@ const Login = () => {
 
             {/* Links */}
             <div className="text-center space-y-2">
-              <Link to="/forgot-password" className="text-sm text-secondary hover:underline">
-                Forgot your password?
-              </Link>
               <div className="text-sm text-muted-foreground">
                 Don't have an account?{' '}
                 <Link to="/register" className="text-secondary hover:underline">

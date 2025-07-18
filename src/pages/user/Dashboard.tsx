@@ -1,8 +1,12 @@
+
+import { useState, useEffect } from 'react';
 import UserLayout from '@/components/UserLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Home, 
   Calendar, 
@@ -10,44 +14,196 @@ import {
   Bell, 
   MapPin, 
   Users, 
-  Wifi, 
-  Car,
-  Coffee,
-  Shield,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
+
+interface Booking {
+  id: string;
+  room_id: string;
+  status: string;
+  monthly_rent: number;
+  check_in_date: string;
+  check_out_date: string | null;
+  rooms: {
+    room_number: string;
+    room_type: string;
+    floor_number: number;
+    price_per_month: number;
+    amenities: string[];
+  };
+}
+
+interface Payment {
+  id: string;
+  amount: number;
+  payment_date: string;
+  payment_type: string;
+  status: string;
+}
+
+interface MaintenanceTicket {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+}
+
+interface Event {
+  id: string;
+  title: string;
+  event_date: string;
+  location: string;
+}
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [currentBooking, setCurrentBooking] = useState<Booking | null>(null);
+  const [recentPayments, setRecentPayments] = useState<Payment[]>([]);
+  const [openTickets, setOpenTickets] = useState<MaintenanceTicket[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
 
-  const stats = [
-    { title: 'Current Booking', value: 'Room A-201', icon: Home, color: 'text-green-600' },
-    { title: 'Monthly Rent', value: '$850', icon: CreditCard, color: 'text-blue-600' },
-    { title: 'Next Payment', value: 'Feb 1, 2024', icon: Calendar, color: 'text-orange-600' },
-    { title: 'Support Tickets', value: '2 Open', icon: Bell, color: 'text-purple-600' },
-  ];
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
 
-  const recentActivities = [
-    { activity: 'Rent payment processed', time: '2 hours ago', status: 'completed' },
-    { activity: 'Maintenance request submitted', time: '1 day ago', status: 'pending' },
-    { activity: 'Community event attended', time: '3 days ago', status: 'completed' },
-    { activity: 'Profile updated', time: '1 week ago', status: 'completed' },
-  ];
+  const fetchDashboardData = async () => {
+    if (!user) return;
 
-  const currentRoom = {
-    name: 'Urban Nest Downtown - Room A-201',
-    location: 'Downtown District',
-    amenities: ['WiFi', 'Parking', 'Common Area', 'Security'],
-    housemates: 3,
-    moveInDate: '2023-12-01',
-    leaseEnd: '2024-11-30'
+    try {
+      setLoading(true);
+
+      // Fetch current active booking
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          rooms (
+            room_number,
+            room_type,
+            floor_number,
+            price_per_month,
+            amenities
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (bookingsError) {
+        console.error('Error fetching bookings:', bookingsError);
+      } else if (bookingsData && bookingsData.length > 0) {
+        setCurrentBooking(bookingsData[0]);
+      }
+
+      // Fetch recent payments
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('payment_date', { ascending: false })
+        .limit(3);
+
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+      } else {
+        setRecentPayments(paymentsData || []);
+      }
+
+      // Fetch open tickets
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from('maintenance_tickets')
+        .select('id, title, status, created_at')
+        .eq('user_id', user.id)
+        .in('status', ['open', 'in_progress'])
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (ticketsError) {
+        console.error('Error fetching tickets:', ticketsError);
+      } else {
+        setOpenTickets(ticketsData || []);
+      }
+
+      // Fetch upcoming events
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
+        .select('id, title, event_date, location')
+        .eq('is_active', true)
+        .gte('event_date', new Date().toISOString())
+        .order('event_date', { ascending: true })
+        .limit(3);
+
+      if (eventsError) {
+        console.error('Error fetching events:', eventsError);
+      } else {
+        setUpcomingEvents(eventsData || []);
+      }
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load dashboard data',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const upcomingEvents = [
-    { title: 'Community Game Night', date: 'Jan 15, 7:00 PM', location: 'Common Area' },
-    { title: 'Professional Networking', date: 'Jan 18, 6:30 PM', location: 'Conference Room' },
-    { title: 'Fitness Class', date: 'Jan 20, 9:00 AM', location: 'Gym' },
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  if (loading) {
+    return (
+      <UserLayout>
+        <div className="p-6 max-w-7xl mx-auto flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </UserLayout>
+    );
+  }
+
+  const stats = [
+    { 
+      title: 'Current Booking', 
+      value: currentBooking ? `Room ${currentBooking.rooms.room_number}` : 'No active booking', 
+      icon: Home, 
+      color: 'text-green-600' 
+    },
+    { 
+      title: 'Monthly Rent', 
+      value: currentBooking ? formatCurrency(currentBooking.monthly_rent) : '-', 
+      icon: CreditCard, 
+      color: 'text-blue-600' 
+    },
+    { 
+      title: 'Recent Payments', 
+      value: recentPayments.length.toString(), 
+      icon: Calendar, 
+      color: 'text-orange-600' 
+    },
+    { 
+      title: 'Open Tickets', 
+      value: openTickets.length.toString(), 
+      icon: Bell, 
+      color: 'text-purple-600' 
+    },
   ];
 
   return (
@@ -83,47 +239,60 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Current Room Info */}
           <div className="lg:col-span-2">
-            <Card className="border-0 shadow-soft mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Home className="h-5 w-5 mr-2 text-secondary" />
-                  Your Current Room
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-lg">{currentRoom.name}</h3>
-                  <div className="flex items-center text-muted-foreground mt-1">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span className="text-sm">{currentRoom.location}</span>
+            {currentBooking ? (
+              <Card className="border-0 shadow-soft mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Home className="h-5 w-5 mr-2 text-secondary" />
+                    Your Current Room
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg">Room {currentBooking.rooms.room_number}</h3>
+                    <div className="flex items-center text-muted-foreground mt-1">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      <span className="text-sm">Floor {currentBooking.rooms.floor_number}</span>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {currentRoom.amenities.map((amenity, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {amenity}
+                  
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {currentBooking.rooms.room_type}
                     </Badge>
-                  ))}
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 pt-4">
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="text-sm">{currentRoom.housemates} Housemates</span>
+                    {currentBooking.rooms.amenities?.map((amenity, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {amenity}
+                      </Badge>
+                    ))}
                   </div>
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="text-sm">Lease until {currentRoom.leaseEnd}</span>
+                  
+                  <div className="grid grid-cols-2 gap-4 pt-4">
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-sm">Since {formatDate(currentBooking.check_in_date)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-sm">{formatCurrency(currentBooking.monthly_rent)}/month</span>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex gap-3 pt-4">
-                  <Button variant="outline" size="sm">View Details</Button>
-                  <Button variant="outline" size="sm">Request Maintenance</Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-0 shadow-soft mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Home className="h-5 w-5 mr-2 text-secondary" />
+                    No Active Booking
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground mb-4">You don't have any active bookings.</p>
+                  <Button variant="outline">Browse Available Rooms</Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Recent Activities */}
             <Card className="border-0 shadow-soft">
@@ -135,22 +304,24 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivities.map((activity, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-accent rounded-lg">
-                      <div className="flex items-center">
-                        <CheckCircle className={`h-4 w-4 mr-3 ${
-                          activity.status === 'completed' ? 'text-green-500' : 'text-orange-500'
-                        }`} />
-                        <div>
-                          <p className="text-sm font-medium">{activity.activity}</p>
-                          <p className="text-xs text-muted-foreground">{activity.time}</p>
+                  {recentPayments.length > 0 ? (
+                    recentPayments.map((payment) => (
+                      <div key={payment.id} className="flex items-center justify-between p-3 bg-accent rounded-lg">
+                        <div className="flex items-center">
+                          <CheckCircle className="h-4 w-4 mr-3 text-green-500" />
+                          <div>
+                            <p className="text-sm font-medium">{payment.payment_type} payment</p>
+                            <p className="text-xs text-muted-foreground">{formatDate(payment.payment_date)}</p>
+                          </div>
                         </div>
+                        <Badge variant="default">
+                          {formatCurrency(payment.amount)}
+                        </Badge>
                       </div>
-                      <Badge variant={activity.status === 'completed' ? 'default' : 'secondary'}>
-                        {activity.status}
-                      </Badge>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4">No recent activities</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -168,13 +339,17 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {upcomingEvents.map((event, index) => (
-                    <div key={index} className="p-3 bg-gradient-card rounded-lg">
-                      <h4 className="font-medium text-sm">{event.title}</h4>
-                      <p className="text-xs text-muted-foreground">{event.date}</p>
-                      <p className="text-xs text-muted-foreground">{event.location}</p>
-                    </div>
-                  ))}
+                  {upcomingEvents.length > 0 ? (
+                    upcomingEvents.map((event) => (
+                      <div key={event.id} className="p-3 bg-gradient-card rounded-lg">
+                        <h4 className="font-medium text-sm">{event.title}</h4>
+                        <p className="text-xs text-muted-foreground">{formatDate(event.event_date)}</p>
+                        <p className="text-xs text-muted-foreground">{event.location}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4 text-sm">No upcoming events</p>
+                  )}
                 </div>
                 <Button variant="outline" size="sm" className="w-full mt-4">
                   View All Events
@@ -190,7 +365,7 @@ const Dashboard = () => {
               <CardContent className="space-y-3">
                 <Button className="w-full" variant="outline">
                   <CreditCard className="h-4 w-4 mr-2" />
-                  Pay Rent
+                  View Payments
                 </Button>
                 <Button className="w-full" variant="outline">
                   <Bell className="h-4 w-4 mr-2" />
@@ -198,36 +373,41 @@ const Dashboard = () => {
                 </Button>
                 <Button className="w-full" variant="outline">
                   <Calendar className="h-4 w-4 mr-2" />
-                  Book Common Area
+                  Browse Rooms
                 </Button>
                 <Button className="w-full" variant="outline">
                   <Users className="h-4 w-4 mr-2" />
-                  Message Housemates
+                  View Profile
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Announcements */}
-            <Card className="border-0 shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Bell className="h-5 w-5 mr-2 text-secondary" />
-                  Announcements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm font-medium">WiFi Upgrade Complete</p>
-                    <p className="text-xs text-muted-foreground">High-speed internet is now available!</p>
+            {/* Open Tickets */}
+            {openTickets.length > 0 && (
+              <Card className="border-0 shadow-soft">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Bell className="h-5 w-5 mr-2 text-secondary" />
+                    Open Tickets
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {openTickets.map((ticket) => (
+                      <div key={ticket.id} className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm font-medium">{ticket.title}</p>
+                        <div className="flex justify-between items-center mt-1">
+                          <p className="text-xs text-muted-foreground">{formatDate(ticket.created_at)}</p>
+                          <Badge variant="secondary" className="text-xs">
+                            {ticket.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm font-medium">New Community Space</p>
-                    <p className="text-xs text-muted-foreground">Check out our renovated lounge area.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

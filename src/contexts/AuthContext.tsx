@@ -1,4 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -10,70 +13,153 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, userType?: 'user' | 'admin') => Promise<boolean>;
-  logout: () => void;
+  session: Session | null;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, userData: { name: string; userType: 'student' | 'professional' }) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Sample users for demo
-const DEMO_USERS = [
-  { id: '1', email: 'student@demo.com', password: 'demo123', name: 'Alex Student', userType: 'student' as const, isVerified: true },
-  { id: '2', email: 'professional@demo.com', password: 'demo123', name: 'Sarah Professional', userType: 'professional' as const, isVerified: true },
-  { id: '3', email: 'admin@demo.com', password: 'admin123', name: 'Admin User', userType: 'admin' as const, isVerified: true },
-];
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem('coliving_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event, session);
+        setSession(session);
+        
+        if (session?.user) {
+          // Fetch user profile from profiles table
+          setTimeout(async () => {
+            try {
+              const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .single();
+
+              if (error) {
+                console.error('Error fetching profile:', error);
+                // Create profile if it doesn't exist
+                const { error: insertError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    user_id: session.user.id,
+                    email: session.user.email || '',
+                    full_name: session.user.user_metadata?.full_name || '',
+                    user_type: session.user.user_metadata?.user_type || 'student'
+                  });
+                
+                if (insertError) {
+                  console.error('Error creating profile:', insertError);
+                }
+              }
+
+              // Check if user is admin
+              const { data: adminUser } = await supabase
+                .from('admin_users')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .eq('is_active', true)
+                .single();
+
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: profile?.full_name || session.user.user_metadata?.full_name || 'User',
+                userType: adminUser ? 'admin' : (profile?.user_type || 'student'),
+                isVerified: session.user.email_confirmed_at ? true : false
+              });
+            } catch (error) {
+              console.error('Error in auth state change:', error);
+            }
+          }, 0);
+        } else {
+          setUser(null);
+        }
+        
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session);
+      // The onAuthStateChange will handle setting the user
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string, userType: 'user' | 'admin' = 'user'): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const foundUser = DEMO_USERS.find(u => 
-      u.email === email && 
-      u.password === password && 
-      (userType === 'admin' ? u.userType === 'admin' : u.userType !== 'admin')
-    );
-    
-    if (foundUser) {
-      const userWithoutPassword = {
-        id: foundUser.id,
-        email: foundUser.email,
-        name: foundUser.name,
-        userType: foundUser.userType,
-        isVerified: foundUser.isVerified
-      };
-      setUser(userWithoutPassword);
-      localStorage.setItem('coliving_user', JSON.stringify(userWithoutPassword));
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setIsLoading(false);
+        return { success: false, error: error.message };
+      }
+
+      // User state will be set by the auth state change listener
+      return { success: true };
+    } catch (error) {
       setIsLoading(false);
-      return true;
+      return { success: false, error: 'An unexpected error occurred' };
     }
-    
-    setIsLoading(false);
-    return false;
   };
 
-  const logout = () => {
+  const register = async (
+    email: string, 
+    password: string, 
+    userData: { name: string; userType: 'student' | 'professional' }
+  ): Promise<{ success: boolean; error?: string }> => {
+    setIsLoading(true);
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: userData.name,
+            user_type: userData.userType
+          }
+        }
+      });
+
+      if (error) {
+        setIsLoading(false);
+        return { success: false, error: error.message };
+      }
+
+      setIsLoading(false);
+      return { success: true };
+    } catch (error) {
+      setIsLoading(false);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('coliving_user');
+    setSession(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, session, login, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
