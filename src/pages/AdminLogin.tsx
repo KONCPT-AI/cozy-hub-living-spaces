@@ -12,7 +12,7 @@ const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading } = useAuth();
+  const { login, logout, isLoading, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -48,6 +48,14 @@ const AdminLogin = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    toast({
+      title: 'Logged Out',
+      description: 'You can now login with admin credentials.',
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -69,6 +77,30 @@ const AdminLogin = () => {
             <p className="text-muted-foreground">Enter your administrative credentials</p>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Current User Warning */}
+            {user && user.userType !== 'admin' && (
+              <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive">Already logged in as regular user</p>
+                    <p className="text-muted-foreground mt-1">
+                      Currently logged in as: {user.email}
+                    </p>
+                    <p className="text-muted-foreground">
+                      You need to logout first to access admin panel.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLogout}
+                    className="ml-2"
+                  >
+                    Logout
+                  </Button>
+                </div>
+              </div>
+            )}
             {/* Demo Account */}
             <div className="space-y-3">
               <p className="text-sm font-medium text-center">Try Demo Admin Account:</p>
