@@ -480,7 +480,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_admin_user: {
+        Args: {
+          user_email: string
+          user_name?: string
+          admin_role?: Database["public"]["Enums"]["admin_role"]
+        }
+        Returns: string
+      }
     }
     Enums: {
       admin_role: "super_admin" | "manager" | "staff"
