@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, userData: { name: string; userType: 'student' | 'professional' }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   isLoading: boolean;
@@ -109,25 +109,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
     try {
+      // Special handling for demo admin
+      if (email === 'admin@demo.com' && password === 'admin123') {
+        console.log('Demo admin login attempt');
+        
+        // Check if demo admin exists in admin_users table
+        const { data: adminUser, error: adminError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('email', 'admin@demo.com')
+          .eq('is_active', true)
+          .single();
+
+        if (adminError || !adminUser) {
+          console.error('Demo admin not found in database:', adminError);
+          setIsLoading(false);
+          return false;
+        }
+
+        // Create a mock session for demo admin
+        const mockUser: User = {
+          id: adminUser.user_id,
+          email: adminUser.email,
+          name: adminUser.full_name || 'Demo Admin',
+          userType: 'admin',
+          isVerified: true
+        };
+
+        setUser(mockUser);
+        setIsLoading(false);
+        return true;
+      }
+
+      // Regular authentication for other users
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error('Auth error:', error);
         setIsLoading(false);
-        return { success: false, error: error.message };
+        return false;
       }
 
       // User state will be set by the auth state change listener
-      return { success: true };
-    } catch (error) {
       setIsLoading(false);
-      return { success: false, error: 'An unexpected error occurred' };
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      setIsLoading(false);
+      return false;
     }
   };
 
@@ -165,6 +201,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    // If it's the demo admin (mock session), just clear the state
+    if (user?.email === 'admin@demo.com') {
+      setUser(null);
+      setSession(null);
+      return;
+    }
+
+    // Regular logout for Supabase authenticated users
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
