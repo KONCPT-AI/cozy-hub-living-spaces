@@ -85,9 +85,8 @@ const BrowseRooms = () => {
   const typeFilters = [
     { label: 'All Types', value: 'all' },
     { label: 'Single', value: 'single' },
-    { label: 'Double', value: 'double' },
-    { label: 'Triple', value: 'triple' },
-    { label: 'Quad', value: 'quad' },
+    { label: 'Shared', value: 'shared' },
+    { label: 'Studio', value: 'studio' },
   ];
 
   const priceFilters = [
