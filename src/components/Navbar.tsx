@@ -8,7 +8,6 @@ const Navbar = () => {
   const location = useLocation();
 
   const navigationItems = [
-    { name: 'Home', href: '/', icon: Home },
     { name: 'About Us', href: '/about', icon: Users },
     { name: 'Explore Spaces', href: '/spaces', icon: Building },
     { name: 'How It Works', href: '/how-it-works', icon: MessageCircle },
@@ -28,7 +27,7 @@ const Navbar = () => {
               <Home className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              CoLiving
+              COCO Living
             </span>
           </Link>
 

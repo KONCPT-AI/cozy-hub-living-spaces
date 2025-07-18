@@ -12,7 +12,7 @@ const Footer = () => {
               <div className="w-8 h-8 bg-secondary rounded-lg flex items-center justify-center">
                 <Home className="h-5 w-5 text-secondary-foreground" />
               </div>
-              <span className="text-xl font-bold">CoLiving</span>
+              <span className="text-xl font-bold">COCO Living</span>
             </Link>
             <p className="text-primary-foreground/80">
               Creating comfortable, affordable co-living spaces for students and working professionals.
@@ -72,7 +72,7 @@ const Footer = () => {
         <div className="mt-8 pt-8 border-t border-primary-foreground/20">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-primary-foreground/60">
-              © 2024 CoLiving. All rights reserved.
+              © 2024 COCO Living. All rights reserved.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <Link to="/privacy" className="text-primary-foreground/60 hover:text-secondary transition-colors">Privacy Policy</Link>
