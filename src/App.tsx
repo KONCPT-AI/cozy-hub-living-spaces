@@ -32,6 +32,11 @@ import UserEvents from "./pages/user/Events";
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import RoomManagement from "./pages/admin/RoomManagement";
+import BookingManagement from "./pages/admin/BookingManagement";
+import PaymentManagement from "./pages/admin/PaymentManagement";
+import TicketManagement from "./pages/admin/TicketManagement";
+import EventManagement from "./pages/admin/EventManagement";
+import Reports from "./pages/admin/Reports";
 
 import NotFound from "./pages/NotFound";
 
@@ -83,27 +88,27 @@ const App = () => (
             } />
             <Route path="/admin/bookings" element={
               <ProtectedAdminRoute>
-                <div className="p-8"><h1 className="text-2xl">Booking Management - Coming Soon</h1></div>
+                <BookingManagement />
               </ProtectedAdminRoute>
             } />
             <Route path="/admin/payments" element={
               <ProtectedAdminRoute>
-                <div className="p-8"><h1 className="text-2xl">Payment Management - Coming Soon</h1></div>
+                <PaymentManagement />
               </ProtectedAdminRoute>
             } />
             <Route path="/admin/tickets" element={
               <ProtectedAdminRoute>
-                <div className="p-8"><h1 className="text-2xl">Ticket Management - Coming Soon</h1></div>
+                <TicketManagement />
               </ProtectedAdminRoute>
             } />
             <Route path="/admin/events" element={
               <ProtectedAdminRoute>
-                <div className="p-8"><h1 className="text-2xl">Event Management - Coming Soon</h1></div>
+                <EventManagement />
               </ProtectedAdminRoute>
             } />
             <Route path="/admin/reports" element={
               <ProtectedAdminRoute>
-                <div className="p-8"><h1 className="text-2xl">Reports - Coming Soon</h1></div>
+                <Reports />
               </ProtectedAdminRoute>
             } />
 
