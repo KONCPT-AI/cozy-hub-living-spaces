@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // Create a mock session for demo admin
         const mockUser: User = {
-          id: adminUser.user_id,
+          id: '00000000-0000-0000-0000-000000000001', // Use the special UUID
           email: adminUser.email,
           name: adminUser.full_name || 'Demo Admin',
           userType: 'admin',
