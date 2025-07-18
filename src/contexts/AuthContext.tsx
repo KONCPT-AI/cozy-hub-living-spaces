@@ -38,36 +38,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Fetch user profile from profiles table
           setTimeout(async () => {
             try {
-              const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .single();
-
-              if (error) {
-                console.error('Error fetching profile:', error);
-                // Create profile if it doesn't exist
-                const { error: insertError } = await supabase
-                  .from('profiles')
-                  .insert({
-                    user_id: session.user.id,
-                    email: session.user.email || '',
-                    full_name: session.user.user_metadata?.full_name || '',
-                    user_type: session.user.user_metadata?.user_type || 'student'
-                  });
-                
-                if (insertError) {
-                  console.error('Error creating profile:', insertError);
-                }
-              }
-
-              // Check if user is admin - first by user_id, then by email for demo users
+              // First check if user is admin
               let { data: adminUser } = await supabase
                 .from('admin_users')
                 .select('*')
                 .eq('user_id', session.user.id)
                 .eq('is_active', true)
-                .single();
+                .maybeSingle();
 
               // If not found by user_id, check by email (for demo admin)
               if (!adminUser) {
@@ -76,9 +53,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   .select('*')
                   .eq('email', session.user.email)
                   .eq('is_active', true)
-                  .single();
+                  .maybeSingle();
                 
                 adminUser = adminByEmail;
+              }
+
+              // Try to fetch user profile
+              let { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+
+              // If profile doesn't exist and user is not admin, create one
+              if (!profile && !adminUser) {
+                const { data: newProfile, error: insertError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    user_id: session.user.id,
+                    email: session.user.email || '',
+                    full_name: session.user.user_metadata?.full_name || '',
+                    user_type: session.user.user_metadata?.user_type || 'student'
+                  })
+                  .select()
+                  .single();
+                
+                if (insertError) {
+                  console.error('Error creating profile:', insertError);
+                } else {
+                  profile = newProfile;
+                }
               }
 
               setUser({
