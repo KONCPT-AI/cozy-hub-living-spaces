@@ -19,9 +19,9 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const result = await login(email, password);
+    const success = await login(email, password);
     
-    if (result.success) {
+    if (success) {
       toast({
         title: 'Welcome back!',
         description: 'You have successfully logged in.',
@@ -30,7 +30,7 @@ const Login = () => {
     } else {
       toast({
         title: 'Login failed',
-        description: result.error || 'Invalid email or password. Please try again.',
+        description: 'Invalid email or password. Please try again.',
         variant: 'destructive',
       });
     }
