@@ -38,35 +38,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Fetch user profile from profiles table
           setTimeout(async () => {
             try {
+              console.log('Processing auth for user:', session.user.id, session.user.email);
+              
               // First check if user is admin
-              let { data: adminUser } = await supabase
+              let { data: adminUser, error: adminError } = await supabase
                 .from('admin_users')
                 .select('*')
                 .eq('user_id', session.user.id)
                 .eq('is_active', true)
                 .maybeSingle();
 
+              console.log('Admin check result:', { adminUser, adminError });
+
               // If not found by user_id, check by email (for demo admin)
-              if (!adminUser) {
-                const { data: adminByEmail } = await supabase
+              if (!adminUser && !adminError) {
+                const { data: adminByEmail, error: adminByEmailError } = await supabase
                   .from('admin_users')
                   .select('*')
                   .eq('email', session.user.email)
                   .eq('is_active', true)
                   .maybeSingle();
                 
+                console.log('Admin by email check:', { adminByEmail, adminByEmailError });
                 adminUser = adminByEmail;
               }
 
               // Try to fetch user profile
-              let { data: profile, error } = await supabase
+              let { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('user_id', session.user.id)
                 .maybeSingle();
 
+              console.log('Profile fetch result:', { profile, profileError });
+
               // If profile doesn't exist and user is not admin, create one
-              if (!profile && !adminUser) {
+              if (!profile && !adminUser && !profileError) {
+                console.log('Creating new profile for user:', session.user.id);
                 const { data: newProfile, error: insertError } = await supabase
                   .from('profiles')
                   .insert({
@@ -78,6 +86,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   .select()
                   .single();
                 
+                console.log('Profile creation result:', { newProfile, insertError });
+                
                 if (insertError) {
                   console.error('Error creating profile:', insertError);
                 } else {
@@ -85,13 +95,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
               }
 
-              setUser({
+              const userType = adminUser ? 'admin' as const : (profile?.user_type as 'student' | 'professional' || 'student' as const);
+              
+              const userObject = {
                 id: session.user.id,
                 email: session.user.email || '',
                 name: profile?.full_name || session.user.user_metadata?.full_name || 'User',
-                userType: adminUser ? 'admin' : (profile?.user_type || 'student'),
+                userType,
                 isVerified: session.user.email_confirmed_at ? true : false
-              });
+              };
+
+              console.log('Setting user object:', userObject);
+              setUser(userObject);
             } catch (error) {
               console.error('Error in auth state change:', error);
             }
