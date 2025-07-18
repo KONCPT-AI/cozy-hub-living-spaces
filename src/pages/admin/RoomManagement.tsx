@@ -62,12 +62,16 @@ const RoomManagement = () => {
     e.preventDefault();
     
     const roomData = {
-      ...formData,
-      capacity: parseInt(formData.capacity),
+      room_number: formData.room_number,
+      room_type: formData.room_type as "single" | "shared" | "studio",
+      capacity: parseInt(formData.capacity.toString()),
       price_per_month: parseFloat(formData.price_per_month),
       deposit_amount: parseFloat(formData.deposit_amount),
-      floor_number: formData.floor_number ? parseInt(formData.floor_number) : null,
+      floor_number: formData.floor_number ? parseInt(formData.floor_number.toString()) : null,
+      description: formData.description || null,
       amenities: formData.amenities ? formData.amenities.split(',').map(a => a.trim()) : null,
+      is_available: formData.is_available,
+      preferred_user_type: formData.preferred_user_type as "student" | "professional",
     };
 
     try {
@@ -204,7 +208,7 @@ const RoomManagement = () => {
                       type="number"
                       min="1"
                       value={formData.capacity}
-                      onChange={(e) => setFormData({...formData, capacity: e.target.value})}
+                      onChange={(e) => setFormData({...formData, capacity: parseInt(e.target.value) || 1})}
                       required
                     />
                   </div>
