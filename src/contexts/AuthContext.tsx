@@ -61,13 +61,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
               }
 
-              // Check if user is admin
-              const { data: adminUser } = await supabase
+              // Check if user is admin - first by user_id, then by email for demo users
+              let { data: adminUser } = await supabase
                 .from('admin_users')
                 .select('*')
                 .eq('user_id', session.user.id)
                 .eq('is_active', true)
                 .single();
+
+              // If not found by user_id, check by email (for demo admin)
+              if (!adminUser) {
+                const { data: adminByEmail } = await supabase
+                  .from('admin_users')
+                  .select('*')
+                  .eq('email', session.user.email)
+                  .eq('is_active', true)
+                  .single();
+                
+                adminUser = adminByEmail;
+              }
 
               setUser({
                 id: session.user.id,
