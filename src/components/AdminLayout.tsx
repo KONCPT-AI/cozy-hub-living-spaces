@@ -34,6 +34,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navigationItems = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'User Management', href: '/admin/users', icon: Users },
+    { name: 'Property Management', href: '/admin/properties', icon: Building },
     { name: 'Room Management', href: '/admin/rooms', icon: Building },
     { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
     { name: 'Payments', href: '/admin/payments', icon: CreditCard },

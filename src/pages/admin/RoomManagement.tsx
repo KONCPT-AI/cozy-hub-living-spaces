@@ -28,20 +28,44 @@ const RoomManagement = () => {
     description: '',
     amenities: '',
     is_available: true,
-    preferred_user_type: 'student'
+    preferred_user_type: 'student',
+    property_id: ''
   });
+  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchRooms();
+    fetchProperties();
   }, []);
+
+  const fetchProperties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setProperties(data || []);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    }
+  };
 
   const fetchRooms = async () => {
     try {
       const { data, error } = await supabase
         .from('rooms')
-        .select('*')
+        .select(`
+          *,
+          properties (
+            id,
+            name
+          )
+        `)
         .order('room_number');
 
       if (error) throw error;
@@ -72,6 +96,7 @@ const RoomManagement = () => {
       amenities: formData.amenities ? formData.amenities.split(',').map(a => a.trim()) : null,
       is_available: formData.is_available,
       preferred_user_type: formData.preferred_user_type as "student" | "professional",
+      property_id: formData.property_id || null,
     };
 
     try {
@@ -115,7 +140,8 @@ const RoomManagement = () => {
       description: '',
       amenities: '',
       is_available: true,
-      preferred_user_type: 'student'
+      preferred_user_type: 'student',
+      property_id: ''
     });
   };
 
@@ -131,7 +157,8 @@ const RoomManagement = () => {
       description: room.description || '',
       amenities: room.amenities?.join(', ') || '',
       is_available: room.is_available,
-      preferred_user_type: room.preferred_user_type || 'student'
+      preferred_user_type: room.preferred_user_type || 'student',
+      property_id: room.property_id || ''
     });
     setIsDialogOpen(true);
   };
@@ -178,6 +205,21 @@ const RoomManagement = () => {
                 <DialogTitle>{selectedRoom ? 'Edit Room' : 'Add New Room'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="property_id">Property</Label>
+                  <Select value={formData.property_id} onValueChange={(value) => setFormData({...formData, property_id: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a property" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties.map((property) => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="room_number">Room Number</Label>
@@ -303,6 +345,7 @@ const RoomManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Property</TableHead>
                   <TableHead>Room Number</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Capacity</TableHead>
@@ -315,6 +358,9 @@ const RoomManagement = () => {
               <TableBody>
                 {rooms.map((room) => (
                   <TableRow key={room.id}>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {room.properties?.name || 'No Property'}
+                    </TableCell>
                     <TableCell className="font-medium">{room.room_number}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{room.room_type}</Badge>

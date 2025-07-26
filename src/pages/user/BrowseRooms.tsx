@@ -42,6 +42,14 @@ interface Room {
   amenities?: string[];
   images?: string[];
   preferred_user_type?: string;
+  property_id?: string;
+  properties?: {
+    id: string;
+    name: string;
+    address?: string;
+    amenities?: string[];
+    images?: string[];
+  };
 }
 
 const BrowseRooms = () => {
@@ -71,7 +79,16 @@ const BrowseRooms = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('rooms')
-        .select('*')
+        .select(`
+          *,
+          properties (
+            id,
+            name,
+            address,
+            amenities,
+            images
+          )
+        `)
         .eq('is_available', true)
         .order('created_at', { ascending: false });
 
@@ -216,7 +233,9 @@ const BrowseRooms = () => {
 
   const filteredRooms = rooms.filter(room => {
     const matchesSearch = room.room_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (room.description && room.description.toLowerCase().includes(searchTerm.toLowerCase()));
+                         (room.description && room.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (room.properties?.name && room.properties.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (room.properties?.address && room.properties.address.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = selectedType === 'all' || room.room_type === selectedType;
     const matchesPrice = priceRange === 'all' || 
       (priceRange === 'under-700' && room.price_per_month < 700) ||
@@ -348,7 +367,15 @@ const BrowseRooms = () => {
                 
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-lg line-clamp-1">Room {room.room_number}</h3>
+                    <div>
+                      <h3 className="font-semibold text-lg line-clamp-1">Room {room.room_number}</h3>
+                      {room.properties && (
+                        <div className="flex items-center text-muted-foreground text-sm mt-1">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          <span className="line-clamp-1">{room.properties.name}</span>
+                        </div>
+                      )}
+                    </div>
                     <Badge variant="outline" className="text-xs">
                       {room.room_type}
                     </Badge>
@@ -496,11 +523,25 @@ const BrowseRooms = () => {
                   )}
                 </div>
 
-                {/* Room Info */}
+                {/* Property & Room Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h3 className="text-xl font-semibold mb-4">Room Information</h3>
                     <div className="space-y-3">
+                      {selectedRoom.properties && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Property:</span>
+                            <span className="font-medium">{selectedRoom.properties.name}</span>
+                          </div>
+                          {selectedRoom.properties.address && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Address:</span>
+                              <span className="font-medium text-sm">{selectedRoom.properties.address}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Room Number:</span>
                         <span className="font-medium">{selectedRoom.room_number}</span>

@@ -421,6 +421,42 @@ export type Database = {
         }
         Relationships: []
       }
+      properties: {
+        Row: {
+          address: string | null
+          amenities: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          images: string[] | null
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          amenities?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          amenities?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rooms: {
         Row: {
           amenities: string[] | null
@@ -435,6 +471,7 @@ export type Database = {
           is_available: boolean | null
           preferred_user_type: Database["public"]["Enums"]["user_type"] | null
           price_per_month: number
+          property_id: string | null
           room_number: string
           room_type: Database["public"]["Enums"]["room_type"]
           updated_at: string
@@ -452,6 +489,7 @@ export type Database = {
           is_available?: boolean | null
           preferred_user_type?: Database["public"]["Enums"]["user_type"] | null
           price_per_month: number
+          property_id?: string | null
           room_number: string
           room_type: Database["public"]["Enums"]["room_type"]
           updated_at?: string
@@ -469,11 +507,20 @@ export type Database = {
           is_available?: boolean | null
           preferred_user_type?: Database["public"]["Enums"]["user_type"] | null
           price_per_month?: number
+          property_id?: string | null
           room_number?: string
           room_type?: Database["public"]["Enums"]["room_type"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rooms_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

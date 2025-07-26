@@ -33,6 +33,7 @@ import UserEvents from "./pages/user/Events";
 // Admin Dashboard Pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
+import PropertyManagement from "./pages/admin/PropertyManagement";
 import RoomManagement from "./pages/admin/RoomManagement";
 import BookingManagement from "./pages/admin/BookingManagement";
 import PaymentManagement from "./pages/admin/PaymentManagement";
@@ -110,6 +111,11 @@ const App = () => (
             <Route path="/admin/users" element={
               <ProtectedAdminRoute>
                 <UserManagement />
+              </ProtectedAdminRoute>
+            } />
+            <Route path="/admin/properties" element={
+              <ProtectedAdminRoute>
+                <PropertyManagement />
               </ProtectedAdminRoute>
             } />
             <Route path="/admin/rooms" element={
