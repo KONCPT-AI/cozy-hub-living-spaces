@@ -12,7 +12,8 @@ import {
   PartyPopper, 
   LogOut,
   Menu,
-  X
+  X,
+  Clock
 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +35,7 @@ const UserLayout = ({ children }: UserLayoutProps) => {
     { name: 'Browse Rooms', href: '/user/rooms', icon: Building },
     { name: 'My Bookings', href: '/user/bookings', icon: Calendar },
     { name: 'Payments', href: '/user/payments', icon: CreditCard },
+    { name: 'Access History', href: '/user/access-history', icon: Clock },
     { name: 'Support', href: '/user/support', icon: HeadphonesIcon },
     { name: 'Events', href: '/user/events', icon: PartyPopper },
   ];

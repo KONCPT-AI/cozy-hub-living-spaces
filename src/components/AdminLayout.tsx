@@ -15,7 +15,8 @@ import {
   Shield,
   LogOut,
   Menu,
-  X
+  X,
+  UserCheck
 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +40,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
     { name: 'Payments', href: '/admin/payments', icon: CreditCard },
     { name: 'Support Tickets', href: '/admin/tickets', icon: Ticket },
+    { name: 'Access Logs', href: '/admin/access-logs', icon: UserCheck },
     { name: 'Events', href: '/admin/events', icon: PartyPopper },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   ];

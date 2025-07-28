@@ -29,6 +29,7 @@ import MyBookings from "./pages/user/MyBookings";
 import Payments from "./pages/user/Payments";
 import Support from "./pages/user/Support";
 import UserEvents from "./pages/user/Events";
+import AccessHistory from "./pages/user/AccessHistory";
 
 // Admin Dashboard Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -40,6 +41,7 @@ import PaymentManagement from "./pages/admin/PaymentManagement";
 import TicketManagement from "./pages/admin/TicketManagement";
 import EventManagement from "./pages/admin/EventManagement";
 import Reports from "./pages/admin/Reports";
+import AccessLogManagement from "./pages/admin/AccessLogManagement";
 
 import NotFound from "./pages/NotFound";
 
@@ -101,6 +103,11 @@ const App = () => (
                 <UserEvents />
               </ProtectedUserRoute>
             } />
+            <Route path="/user/access-history" element={
+              <ProtectedUserRoute>
+                <AccessHistory />
+              </ProtectedUserRoute>
+            } />
 
             {/* Protected Admin Dashboard Routes */}
             <Route path="/admin/dashboard" element={
@@ -146,6 +153,11 @@ const App = () => (
             <Route path="/admin/reports" element={
               <ProtectedAdminRoute>
                 <Reports />
+              </ProtectedAdminRoute>
+            } />
+            <Route path="/admin/access-logs" element={
+              <ProtectedAdminRoute>
+                <AccessLogManagement />
               </ProtectedAdminRoute>
             } />
 

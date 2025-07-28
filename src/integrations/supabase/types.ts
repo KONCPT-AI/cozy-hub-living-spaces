@@ -142,6 +142,48 @@ export type Database = {
           },
         ]
       }
+      check_in_out_logs: {
+        Row: {
+          authentication_method: string
+          check_type: string
+          created_at: string
+          device_id: string | null
+          id: string
+          is_late_entry: boolean | null
+          notes: string | null
+          property_id: string
+          room_id: string | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          authentication_method: string
+          check_type: string
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          is_late_entry?: boolean | null
+          notes?: string | null
+          property_id: string
+          room_id?: string | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          authentication_method?: string
+          check_type?: string
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          is_late_entry?: boolean | null
+          notes?: string | null
+          property_id?: string
+          room_id?: string | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string
@@ -320,6 +362,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          metadata: Json | null
+          property_id: string | null
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          metadata?: Json | null
+          property_id?: string | null
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          metadata?: Json | null
+          property_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -457,6 +535,39 @@ export type Database = {
         }
         Relationships: []
       }
+      property_settings: {
+        Row: {
+          created_at: string
+          curfew_end_time: string
+          curfew_start_time: string
+          id: string
+          late_entry_notifications_enabled: boolean | null
+          notification_recipients: string[] | null
+          property_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          curfew_end_time?: string
+          curfew_start_time?: string
+          id?: string
+          late_entry_notifications_enabled?: boolean | null
+          notification_recipients?: string[] | null
+          property_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          curfew_end_time?: string
+          curfew_start_time?: string
+          id?: string
+          late_entry_notifications_enabled?: boolean | null
+          notification_recipients?: string[] | null
+          property_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rooms: {
         Row: {
           amenities: string[] | null
@@ -537,6 +648,10 @@ export type Database = {
       }
       is_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_late_entry: {
+        Args: { property_id_param: string; check_time?: string }
         Returns: boolean
       }
     }
