@@ -58,8 +58,8 @@ export default function AccessLogManagement() {
   const [logs, setLogs] = useState<AccessLog[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertySettings, setPropertySettings] = useState<PropertySetting[]>([]);
-  const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [selectedAuthMethod, setSelectedAuthMethod] = useState<string>("");
+  const [selectedProperty, setSelectedProperty] = useState<string>("all");
+  const [selectedAuthMethod, setSelectedAuthMethod] = useState<string>("all");
   const [searchDate, setSearchDate] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -98,10 +98,10 @@ export default function AccessLogManagement() {
         .order("timestamp", { ascending: false })
         .limit(100);
 
-      if (selectedProperty) {
+      if (selectedProperty && selectedProperty !== "all") {
         logsQuery = logsQuery.eq("property_id", selectedProperty);
       }
-      if (selectedAuthMethod) {
+      if (selectedAuthMethod && selectedAuthMethod !== "all") {
         logsQuery = logsQuery.eq("authentication_method", selectedAuthMethod);
       }
       if (searchDate) {
@@ -253,7 +253,7 @@ export default function AccessLogManagement() {
                   <SelectValue placeholder="All Properties" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Properties</SelectItem>
+                  <SelectItem value="all">All Properties</SelectItem>
                   {properties.map((property) => (
                     <SelectItem key={property.id} value={property.id}>
                       {property.name}
@@ -270,7 +270,7 @@ export default function AccessLogManagement() {
                   <SelectValue placeholder="All Methods" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Methods</SelectItem>
+                  <SelectItem value="all">All Methods</SelectItem>
                   <SelectItem value="face_recognition">Face Recognition</SelectItem>
                   <SelectItem value="fingerprint">Fingerprint</SelectItem>
                   <SelectItem value="smart_card">Smart Card</SelectItem>
@@ -293,8 +293,8 @@ export default function AccessLogManagement() {
               <Label>&nbsp;</Label>
               <Button 
                 onClick={() => {
-                  setSelectedProperty("");
-                  setSelectedAuthMethod("");
+                  setSelectedProperty("all");
+                  setSelectedAuthMethod("all");
                   setSearchDate("");
                 }}
                 variant="outline"

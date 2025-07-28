@@ -60,7 +60,8 @@ const TicketManagement = () => {
 
     try {
       const updateData: any = {};
-      if (assignTo) updateData.assigned_to = assignTo;
+      if (assignTo && assignTo !== "unassigned") updateData.assigned_to = assignTo;
+      if (assignTo === "unassigned") updateData.assigned_to = null;
       if (newStatus) updateData.status = newStatus;
       if (resolutionNotes) updateData.resolution_notes = resolutionNotes;
       if (newStatus === 'resolved') updateData.resolved_at = new Date().toISOString();
@@ -251,7 +252,7 @@ const TicketManagement = () => {
                                   <SelectValue placeholder="Select admin user" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="">Unassigned</SelectItem>
+                                  <SelectItem value="unassigned">Unassigned</SelectItem>
                                   {adminUsers.map((admin) => (
                                     <SelectItem key={admin.user_id} value={admin.user_id}>
                                       {admin.full_name || admin.email}
