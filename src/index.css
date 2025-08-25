@@ -6,34 +6,34 @@
 
 @layer base {
   :root {
-    /* Co-living Brand Colors */
-    --primary: 210 50% 23%;        /* Dark Blue #1E395B */
+    /* COCO Living Brand Colors - Warm Brown Theme */
+    --primary: 25 35% 25%;         /* Rich Brown #5A4133 */
     --primary-foreground: 36 67% 94%;  /* Light Beige #F4EEEA */
     
-    --secondary: 18 96% 59%;       /* Orange #FE7F32 */
-    --secondary-foreground: 210 50% 23%;  /* Dark Blue text on orange */
+    --secondary: 32 50% 80%;       /* Warm Beige #E5D5C8 */
+    --secondary-foreground: 25 35% 25%;  /* Brown text on beige */
     
-    --accent: 36 67% 94%;          /* Light Beige #F4EEEA */
-    --accent-foreground: 210 50% 23%;     /* Dark Blue */
+    --accent: 35 45% 70%;          /* Medium Beige #C9B299 */
+    --accent-foreground: 25 35% 25%;     /* Brown */
     
-    --muted: 25 22% 82%;           /* Warm Beige #E1CEC3 */
-    --muted-foreground: 0 0% 20%;   /* Dark Gray #333333 */
+    --muted: 35 30% 88%;           /* Light Warm Beige #E8DDD4 */
+    --muted-foreground: 25 25% 35%; /* Medium Brown #6B5B4F */
     
-    --background: 0 0% 100%;       /* White */
-    --foreground: 0 0% 20%;        /* Dark Gray #333333 */
+    --background: 36 40% 92%;      /* Very Light Beige #F2E8DC */
+    --foreground: 25 35% 25%;      /* Rich Brown #5A4133 */
     
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 20%;
+    --card: 0 0% 100%;             /* White cards */
+    --card-foreground: 25 35% 25%; 
     
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 20%;
+    --popover-foreground: 25 35% 25%;
     
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 25 22% 88%;          /* Lighter warm beige */
-    --input: 25 22% 88%;
-    --ring: 18 96% 59%;            /* Orange focus ring */
+    --border: 35 25% 85%;          /* Light beige border */
+    --input: 35 25% 85%;
+    --ring: 25 35% 25%;            /* Brown focus ring */
     
     --success: 142 71% 45%;        /* Green for success states */
     --success-foreground: 0 0% 98%;
@@ -47,36 +47,29 @@
     --radius: 0.75rem;
     
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(210 50% 23%), hsl(210 50% 35%));
-    --gradient-secondary: linear-gradient(135deg, hsl(18 96% 59%), hsl(18 96% 70%));
-    --gradient-hero: linear-gradient(135deg, hsl(210 50% 23%) 0%, hsl(18 96% 59%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(25 35% 25%), hsl(25 35% 35%));
+    --gradient-secondary: linear-gradient(135deg, hsl(32 50% 80%), hsl(32 50% 85%));
+    --gradient-hero: linear-gradient(135deg, hsl(36 40% 92%) 0%, hsl(32 50% 80%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(36 67% 97%) 100%);
     
     /* Shadows */
-    --shadow-soft: 0 4px 20px hsl(210 50% 23% / 0.08);
-    --shadow-medium: 0 8px 30px hsl(210 50% 23% / 0.12);
-    --shadow-strong: 0 16px 40px hsl(210 50% 23% / 0.16);
-    --shadow-orange-glow: 0 0 30px hsl(18 96% 59% / 0.3);
+    --shadow-soft: 0 4px 20px hsl(25 35% 25% / 0.08);
+    --shadow-medium: 0 8px 30px hsl(25 35% 25% / 0.12);
+    --shadow-strong: 0 16px 40px hsl(25 35% 25% / 0.16);
+    --shadow-orange-glow: 0 0 30px hsl(25 35% 25% / 0.3);
     
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 36 40% 96%;    /* Very light warm beige */
+    --sidebar-foreground: 25 35% 25%;    /* Rich brown */
+    --sidebar-primary: 25 35% 25%;       /* Rich brown */
+    --sidebar-primary-foreground: 36 67% 94%;  /* Light beige */
+    --sidebar-accent: 35 30% 88%;        /* Light warm beige */
+    --sidebar-accent-foreground: 25 35% 25%;   /* Rich brown */
+    --sidebar-border: 35 25% 85%;        /* Light beige border */
+    --sidebar-ring: 25 35% 25%;          /* Brown ring */
   }
 
   .dark {
