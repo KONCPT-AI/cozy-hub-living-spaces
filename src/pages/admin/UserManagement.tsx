@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Users, Search, Eye, CheckCircle, XCircle, UserPlus } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/AdminLayout';
+import axios from 'axios';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -46,14 +47,9 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      setLoading(true);
+      const { data } = await axios.get(`${API_BASE_URL}/api/users`);
       setUsers(data || []);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -67,18 +63,11 @@ const UserManagement = () => {
 
   const verifyUser = async (userId, verified) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ kyc_verified: verified })
-        .eq('user_id', userId);
-
-      if (error) throw error;
-
+      await axios.patch(`/api/users/${userId}/verify`, { verified });
       toast({
         title: 'Success',
         description: `User ${verified ? 'verified' : 'unverified'} successfully`,
       });
-      
       fetchUsers();
     } catch (error) {
       console.error('Error updating user:', error);
@@ -92,29 +81,21 @@ const UserManagement = () => {
 
   const handleAddUser = async (e) => {
     e.preventDefault();
-    
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: crypto.randomUUID(), // In production, this should come from auth.users
-          email: formData.email,
-          full_name: formData.full_name,
-          phone: formData.phone,
-          user_type: formData.user_type as "student" | "professional",
-          occupation: formData.occupation,
-          date_of_birth: formData.date_of_birth || null,
-          emergency_contact_name: formData.emergency_contact_name,
-          emergency_contact_phone: formData.emergency_contact_phone,
-        });
-
-      if (error) throw error;
-
+      await axios.post('/api/user-by-admin/add', {
+        email: formData.email,
+        full_name: formData.full_name,
+        phone: formData.phone,
+        user_type: formData.user_type,
+        occupation: formData.occupation,
+        date_of_birth: formData.date_of_birth || null,
+        emergency_contact_name: formData.emergency_contact_name,
+        emergency_contact_phone: formData.emergency_contact_phone,
+      });
       toast({
         title: 'Success',
         description: 'User profile created successfully',
       });
-      
       setIsAddDialogOpen(false);
       resetForm();
       fetchUsers();
@@ -127,7 +108,6 @@ const UserManagement = () => {
       });
     }
   };
-
   const resetForm = () => {
     setFormData({
       email: '',

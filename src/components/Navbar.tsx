@@ -26,8 +26,8 @@ const Navbar = () => {
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
               <Home className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              COCO Living
+            <span className="text-xl font-bold px-3 bg-gradient-primary rounded-lg">
+               <img src="/logo.png" alt="Logo" className="w-24 h-10 object-contain" />
             </span>
           </Link>
 

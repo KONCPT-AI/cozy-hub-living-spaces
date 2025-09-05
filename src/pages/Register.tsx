@@ -1,72 +1,156 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
 import { Home, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    name: '',
+    fullName: '',
     email: '',
     password: '',
     confirmPassword: '',
     userType: 'student' as 'student' | 'professional'
   });
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { register, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: 'Password mismatch',
-        description: 'Passwords do not match. Please try again.',
-        variant: 'destructive',
-      });
-      return;
+  const validateField = (field: string, value: string, data: typeof formData) => {
+    let message = "";
+
+    if (field === "fullName") {
+      if (!value.trim()) {
+        message = "Full Name is required";
+      } else if (!/^[a-zA-Z ]{2,50}$/.test(value.trim())) {
+        message = "Full Name must be 2 to 50 alphabetic characters";
+      }
     }
 
-    if (formData.password.length < 6) {
-      toast({
-        title: 'Password too short',
-        description: 'Password must be at least 6 characters long.',
-        variant: 'destructive',
-      });
-      return;
+    if (field === "email") {
+      if (!value.trim()) {
+        message = "Email is required";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        message = "Enter a valid email address";
+      }
     }
-    
-    const result = await register(formData.email, formData.password, {
-      name: formData.name,
-      userType: formData.userType
+
+    if (field === "password") {
+      if (!value) {
+        message = "Password is required";
+      } else if (value.length < 6) {
+        message = "Password must be at least 6 characters";
+      }
+    }
+
+    if (field === "confirmPassword") {
+      if (!value) {
+        message = "Please confirm your password";
+      } else if (value !== data.password) {
+        message = "Passwords do not match";
+      }
+    }
+
+    if (field === "userType") {
+      if (!value) {
+        message = "User type is required";
+      }
+    }
+
+    return message;
+  };
+
+  //validate all fields
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    Object.keys(formData).forEach((field) => {
+      const message = validateField(field, (formData as any)[field], formData);
+      if (message) newErrors[field] = message;
     });
-    
-    if (result.success) {
-      toast({
-        title: 'Registration successful!',
-        description: 'Please check your email to verify your account.',
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+
+    if (!validateForm()) return;
+
+    try {
+      setIsLoading(true);
+      const response = await axios.post(`${API_BASE_URL}/api/user/register`,formData);
+
+      if (response.data.success) {
+        toast({
+          title: 'Registration successful!',
+          description: 'Please check your email to verify your account.',
+        });
+        navigate('/login');
+      } else {
+        toast({
+          title: 'Registration failed',
+          description: response.data.message || 'Something went wrong. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error("Registration error:", error);
+
+  if (error.response && error.response.data) {
+    const data = error.response.data;
+
+    // agar backend ne errors array bheji hai
+    if (data.errors && Array.isArray(data.errors)) {
+      const formattedErrors: { [key: string]: string } = {};
+      data.errors.forEach((err: any) => {
+        if (err.path) {
+          formattedErrors[err.path] = err.msg;
+        }
       });
-      navigate('/login');
-    } else {
-      toast({
-        title: 'Registration failed',
-        description: result.error || 'Something went wrong. Please try again.',
-        variant: 'destructive',
-      });
+      setErrors(formattedErrors);
+
+    } else if (data.message) {
+      // ek hi message mila hai
+      const formattedErrors: { [key: string]: string } = {};
+
+      if (data.message.toLowerCase().includes("exists")) {
+        // specific case: email already exists
+        formattedErrors["email"] = data.message;
+      } else if (data.message.toLowerCase().includes("name")) {
+        formattedErrors["fullName"] = data.message;
+      } else {
+        // agar kisi field se match nahi hota → global error
+        formattedErrors["general"] = data.message;
+      }
+      setErrors(formattedErrors);
     }
+      } else {
+        setErrors({ general: "Something went wrong. Please try again." });
+      }
+    }finally {
+      setIsLoading(false);
+    }
+
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    const updatedData = { ...formData, [field]: value };
+    setFormData(updatedData);
+
+     const message = validateField(field, value, updatedData);
+    setErrors((prev) => ({
       ...prev,
-      [field]: value
+      [field]: message
     }));
   };
 
@@ -91,26 +175,30 @@ const Register = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4">
+        
+              {/* Full Name */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Full Name</label>
                 <Input
                   type="text"
                   placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  required
+                  value={formData.fullName}
+                  onChange={(e) => handleInputChange('fullName', e.target.value)}
                 />
+                {errors.fullName && <p className="text-red-500 text-sm">{errors.fullName}</p>}
               </div>
 
+              {/* Email */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Email</label>
                 <Input
                   type="email"
+                  name="email"
                   placeholder="Enter your email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
                 />
+                {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
               </div>
 
               {/* User Type Selection */}
@@ -134,8 +222,10 @@ const Register = () => {
                     Professional
                   </Button>
                 </div>
+                {errors.userType && <p className="text-red-500 text-sm">{errors.userType}</p>}
               </div>
 
+              {/* Password */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Password</label>
                 <div className="relative">
@@ -144,7 +234,6 @@ const Register = () => {
                     placeholder="Create a password"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    required
                   />
                   <Button
                     type="button"
@@ -156,8 +245,10 @@ const Register = () => {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
+                {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
               </div>
 
+              {/* Confirm Password */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Confirm Password</label>
                 <div className="relative">
@@ -166,7 +257,6 @@ const Register = () => {
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    required
                   />
                   <Button
                     type="button"
@@ -178,8 +268,10 @@ const Register = () => {
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
+                {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword}</p>}
               </div>
 
+              {/* Submit Button */}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>

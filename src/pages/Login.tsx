@@ -1,39 +1,109 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
 import { Home, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "react-toastify";
+import { useAuth } from "@/contexts/AuthContext"; 
+import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
+import type { NormalUser } from "@/contexts/AuthContext"; 
+
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { setUser } = useAuth();
+
+ const validateField = (field: string, value: string, data: { email: string; password: string }) => {
+  let message = "";
+
+  if (field === "email") {
+    if (!value.trim()) {
+      message = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      message = "Enter a valid email address";
+    }
+  }
+
+  if (field === "password") {
+    if (!value) {
+      message = "Password is required";
+    } else if (value.length < 6) {
+      message = "Password must be at least 6 characters";
+    }
+  }
+
+  return message;
+    };
+
+    const validateForm = (data: { email: string; password: string }) => {
+      const newErrors: { [key: string]: string } = {};
+      Object.keys(data).forEach((field) => {
+        const message = validateField(field, (data as any)[field], data);
+        if (message) newErrors[field] = message;
+      });
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    const handleInputChange = (field: "email" | "password", value: string) => {
+      const updatedData = { email, password, [field]: value };
+      if (field === "email") setEmail(value);
+      if (field === "password") setPassword(value);
+
+      const message = validateField(field, value, updatedData);
+      setErrors((prev) => ({ ...prev, [field]: message }));
+    };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const success = await login(email, password);
-    
-    if (success) {
-      toast({
-        title: 'Welcome back!',
-        description: 'You have successfully logged in.',
-      });
-      navigate('/user/dashboard');
-    } else {
-      toast({
-        title: 'Login failed',
-        description: 'Invalid email or password. Please try again.',
-        variant: 'destructive',
-      });
+    setIsLoading(true);
+
+    if (!validateForm({ email, password })) {
+      setIsLoading(false);
+      return;
     }
+      
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/common/login`, {
+        email,
+        password
+      }); 
+
+      const data = res.data;
+
+      if (data.success && data.account.role !== 1) {
+        const normalUser: NormalUser = {
+          id: data.account.id,
+          token: data.token,
+          role: 'user',
+          fullName: data.account.fullName,
+          userType: data.account.userType
+        };
+        setUser(normalUser);
+        sessionStorage.setItem('user', JSON.stringify(normalUser));
+
+        toast.success("Login successful!");
+        navigate("/user/dashboard");
+      } else {
+        toast.error("Invalid user credentials");
+      }
+      
+    } catch (err: any) {
+    //  Ab error message backend ka hi show karega
+
+    toast.error(err?.response?.data?.message || "Something went wrong");
+  } finally {
+    setIsLoading(false);
+  }
   };
 
   return (
@@ -64,9 +134,10 @@ const Login = () => {
                   type="email"
                   placeholder="Enter your email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                />{errors.email && (
+                  <p className="text-xs text-red-500">{errors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -76,8 +147,7 @@ const Login = () => {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                    onChange={(e) => handleInputChange("password", e.target.value)}
                   />
                   <Button
                     type="button"
@@ -89,6 +159,9 @@ const Login = () => {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
+                {errors.password && (
+                  <p className="text-xs text-red-500">{errors.password}</p>
+                )}
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>

@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
+import axios from 'axios';
 import { 
   Home, 
   Calendar, 
@@ -75,76 +76,27 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     if (!user) return;
 
-    try {
+    try { 
       setLoading(true);
 
       // Fetch current active booking
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          rooms (
-            room_number,
-            room_type,
-            floor_number,
-            price_per_month,
-            amenities
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1);
+       const [
+        bookingsRes,
+        paymentsRes,
+        ticketsRes,
+        eventsRes
+      ] = await Promise.all([
+         axios.get(`${API_BASE_URL}/api/bookings?userId=${user.id}&status=active`),
+        axios.get(`${API_BASE_URL}/api/payments?userId=${user.id}&limit=3`),
+        axios.get(`${API_BASE_URL}/api/tickets?userId=${user.id}&status=open,in_progress&limit=3`),
+        axios.get(`${API_BASE_URL}/api/events?isActive=true&from=${new Date().toISOString()}&limit=3`)
+      ]);
 
-      if (bookingsError) {
-        console.error('Error fetching bookings:', bookingsError);
-      } else if (bookingsData && bookingsData.length > 0) {
-        setCurrentBooking(bookingsData[0]);
-      }
+      setCurrentBooking(bookingsRes.data?.[0] || null);
+      setRecentPayments(paymentsRes.data || []);
+      setOpenTickets(ticketsRes.data || []);
+      setUpcomingEvents(eventsRes.data || []);
 
-      // Fetch recent payments
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('payment_date', { ascending: false })
-        .limit(3);
-
-      if (paymentsError) {
-        console.error('Error fetching payments:', paymentsError);
-      } else {
-        setRecentPayments(paymentsData || []);
-      }
-
-      // Fetch open tickets
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from('maintenance_tickets')
-        .select('id, title, status, created_at')
-        .eq('user_id', user.id)
-        .in('status', ['open', 'in_progress'])
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      if (ticketsError) {
-        console.error('Error fetching tickets:', ticketsError);
-      } else {
-        setOpenTickets(ticketsData || []);
-      }
-
-      // Fetch upcoming events
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
-        .select('id, title, event_date, location')
-        .eq('is_active', true)
-        .gte('event_date', new Date().toISOString())
-        .order('event_date', { ascending: true })
-        .limit(3);
-
-      if (eventsError) {
-        console.error('Error fetching events:', eventsError);
-      } else {
-        setUpcomingEvents(eventsData || []);
-      }
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -182,7 +134,7 @@ const Dashboard = () => {
   const stats = [
     { 
       title: 'Current Booking', 
-      value: currentBooking ? `Room ${currentBooking.rooms.room_number}` : 'No active booking', 
+      value: currentBooking?.rooms?.room_number ? `Room ${currentBooking.rooms.room_number }` : 'No active booking', 
       icon: Home, 
       color: 'text-green-600' 
     },
@@ -212,7 +164,7 @@ const Dashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back, {user?.name}! 👋
+            Welcome back, {user?.fullName || user?.name || "User"}! 👋
           </h1>
           <p className="text-muted-foreground">
             Here's what's happening in your co-living space today.

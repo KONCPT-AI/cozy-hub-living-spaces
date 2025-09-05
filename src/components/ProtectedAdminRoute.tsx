@@ -14,7 +14,7 @@ const ProtectedAdminRoute = ({ children, requiredRole }: ProtectedAdminRouteProp
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && (!user || user.userType !== 'admin')) {
+    if (!isLoading && (!user || user.role !== 'admin')) {
       navigate('/admin-login');
     }
   }, [user, isLoading, navigate]);
@@ -27,7 +27,7 @@ const ProtectedAdminRoute = ({ children, requiredRole }: ProtectedAdminRouteProp
     );
   }
 
-  if (!user || user.userType !== 'admin') {
+  if (!user || user.role !== 'admin') {
     return null;
   }
 

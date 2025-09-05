@@ -4,57 +4,124 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth,AdminUser } from '@/contexts/AuthContext';
 import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
+import axios from "axios";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, logout, isLoading, user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { user,setUser,logout } = useAuth();
+
+  const validateField = (field: string, value: string, data: { email: string; password: string }) => {
+  let message = "";
+
+  if (field === "email") {
+    if (!value.trim()) {
+      message = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      message = "Enter a valid email address";
+    }
+  }
+
+  if (field === "password") {
+    if (!value) {
+      message = "Password is required";
+    } else if (value.length < 6) {
+      message = "Password must be at least 6 characters";
+    }
+  }
+
+  return message;
+    };
+
+    const validateForm = (data: { email: string; password: string }) => {
+      const newErrors: { [key: string]: string } = {};
+      Object.keys(data).forEach((field) => {
+        const message = validateField(field, (data as any)[field], data);
+        if (message) newErrors[field] = message;
+      });
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    const handleInputChange = (field: "email" | "password", value: string) => {
+      const updatedData = { email, password, [field]: value };
+      if (field === "email") setEmail(value);
+      if (field === "password") setPassword(value);
+
+      const message = validateField(field, value, updatedData);
+      setErrors((prev) => ({ ...prev, [field]: message }));
+    };
+
+  const login=async (email:string, password:string)=>{
+    
+    try{
+        const response = await axios.post(`${API_BASE_URL}/api/common/login`, { email, password });
+        const data=response.data;
+
+        if(data.success && data.account.role === 1){
+          const adminUser:AdminUser={
+            id:data.account.id,
+            token:data.token,
+            role:"admin",
+          };
+          setUser(adminUser);
+          sessionStorage.setItem('user', JSON.stringify(adminUser));
+          return true;
+        }
+        return false
+    }catch(err){
+      return false;
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+   e.preventDefault();
+    setIsLoading(true);
+
+    if (!validateForm({ email, password })) {
+      setIsLoading(false);
+      return;
+    }
+
     const success = await login(email, password);
     
     if (success) {
-      toast({
-        title: 'Admin Access Granted',
-        description: 'Welcome to the admin dashboard.',
-      });
+      toast.success('Admin Access Granted)');
       navigate('/admin/dashboard');
     } else {
-      toast({
-        title: 'Access Denied',
-        description: 'Invalid admin credentials. Please try again.',
-        variant: 'destructive',
-      });
+      toast.error("Invalid admin credentials");
     }
+    setIsLoading(false);
   };
 
-  const handleDemoLogin = async () => {
-    const success = await login('admin@demo.com', 'admin123');
+  // const handleDemoLogin = async () => {
+  //   const success = await login('admin@demo.com', 'admin123');
     
-    if (success) {
-      toast({
-        title: 'Demo Admin Access',
-        description: 'Welcome to the admin dashboard.',
-      });
-      navigate('/admin/dashboard');
-    }
-  };
+  //   if (success) {
+  //     toast({
+  //       title: 'Demo Admin Access',
+  //       description: 'Welcome to the admin dashboard.',
+  //     });
+  //     navigate('/admin/dashboard');
+  //   }
+  // };
 
-  const handleLogout = async () => {
-    await logout();
-    toast({
-      title: 'Logged Out',
-      description: 'You can now login with admin credentials.',
-    });
-  };
+  // const handleLogout = async () => {
+  //   await logout();
+  //   toast({
+  //     title: 'Logged Out',
+  //     description: 'You can now login with admin credentials.',
+  //   });
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center px-4">
@@ -78,13 +145,13 @@ const AdminLogin = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Current User Warning */}
-            {user && user.userType !== 'admin' && (
+            {user && user.role !== 'admin' && (
               <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="text-sm">
                     <p className="font-medium text-destructive">Already logged in as regular user</p>
                     <p className="text-muted-foreground mt-1">
-                      Currently logged in as: {user.email}
+                      {/* Currently logged in as: {user.email} */}
                     </p>
                     <p className="text-muted-foreground">
                       You need to logout first to access admin panel.
@@ -93,7 +160,7 @@ const AdminLogin = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleLogout}
+                    // onClick={handleLogout}
                     className="ml-2"
                   >
                     Logout
@@ -108,7 +175,7 @@ const AdminLogin = () => {
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={handleDemoLogin}
+                // onClick={handleDemoLogin}
                 disabled={isLoading}
               >
                 <Badge variant="secondary" className="mr-2">Demo</Badge>
@@ -127,9 +194,10 @@ const AdminLogin = () => {
                   type="email"
                   placeholder="Enter admin email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                />{errors.email && (
+                  <p className="text-xs text-red-500">{errors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -139,8 +207,7 @@ const AdminLogin = () => {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter admin password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                    onChange={(e) => handleInputChange("password", e.target.value)}
                   />
                   <Button
                     type="button"
@@ -152,6 +219,9 @@ const AdminLogin = () => {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
+                {errors.password && (
+                  <p className="text-xs text-red-500">{errors.password}</p>
+                )}
               </div>
 
               <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90" disabled={isLoading}>

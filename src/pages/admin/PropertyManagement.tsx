@@ -9,11 +9,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { supabase } from "@/integrations/supabase/client";
+import axios from "axios";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, MapPin, Home } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Property {
+  createdAt: string;
   id: string;
   name: string;
   address: string;
@@ -21,8 +24,7 @@ interface Property {
   images: string[];
   amenities: string[];
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+
 }
 
 const PropertyManagement = () => {
@@ -39,20 +41,88 @@ const PropertyManagement = () => {
     is_active: true,
   });
   const { toast } = useToast();
+  const [errors, setErrors] = useState<any>({});
+  const { user } = useAuth();  
+  const token = user?.token;   
 
   useEffect(() => {
     fetchProperties();
   }, []);
 
-  const fetchProperties = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("properties")
-        .select("*")
-        .order("created_at", { ascending: false });
+   const validateField = (field: string, value: string, data: typeof formData) => {
+    let message = "";
 
-      if (error) throw error;
-      setProperties(data || []);
+    if (field === "name") {
+      if (!value.trim()) {
+        message = "Name is required";
+      } else if (!/^[a-zA-Z ]{2,50}$/.test(value.trim())) {
+        message = "Name must be 2 to 50 alphabetic characters";
+      }
+    }
+
+    if (field === "address") {
+      if (!value.trim()) {
+        message = "Address is required";
+      } else if (!/^[a-zA-Z0-9\s,.'-]{2,100}$/.test(value.trim())) {
+        message = "Address must be 2 to 100 characters long";
+      }
+    }
+
+    if (field === "description") {
+        const desc = value ? String(value).trim() : "";
+      if (desc !== "" && (desc.length < 10 || desc.length > 500)) {
+        message = "Description must be 10 to 500 characters long";
+      }
+    }
+
+    if (field === "images") {
+      if (!value) return "";
+      const urls = value.split(",").map(img => img.trim());
+      for (let url of urls) {
+        if (!/^https?:\/\/.+\..+/.test(url)) return "Enter valid image URLs";
+      }
+      return "";
+    }
+
+    return message;
+  };
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    Object.keys(formData).forEach((field) => {
+      const message = validateField(field, (formData as any)[field], formData);
+      if (message) newErrors[field] = message;
+    });
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+   const handleInputChange = (field: string, value: string) => {
+    const updatedData = { ...formData, [field]: value };
+    setFormData(updatedData);
+
+     const message = validateField(field, value, updatedData);
+    setErrors((prev) => ({
+      ...prev,
+      [field]: message
+    }));
+  };
+
+  const fetchProperties = async () => {
+     try {
+      const response = await axios.get(`${API_BASE_URL}/api/property/getAll`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      //convert aminities to an array
+      const data = response.data.map((p: any) => ({
+        ...p,
+        amenities: typeof p.amenities === "string"
+          ? p.amenities.split(",").map((a: string) => a.trim())
+          : p.amenities,
+      }));
+      setProperties(data);
     } catch (error) {
       console.error("Error fetching properties:", error);
       toast({
@@ -61,11 +131,17 @@ const PropertyManagement = () => {
         variant: "destructive",
       });
     }
+   
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    if (!validateForm()){
+       setIsLoading(false);
+       return;
+    }
 
     try {
       const propertyData = {
@@ -73,36 +149,30 @@ const PropertyManagement = () => {
         address: formData.address,
         description: formData.description,
         images: formData.images ? formData.images.split(",").map(img => img.trim()) : [],
-        amenities: formData.amenities ? formData.amenities.split(",").map(amenity => amenity.trim()) : [],
+        amenities: formData.amenities ,
         is_active: formData.is_active,
       };
 
       if (selectedProperty) {
-        const { error } = await supabase
-          .from("properties")
-          .update(propertyData)
-          .eq("id", selectedProperty.id);
-
-        if (error) throw error;
-        toast({
-          title: "Success",
-          description: "Property updated successfully",
-        });
+        await axios.put(
+          `${API_BASE_URL}/api/property/edit/${selectedProperty.id}`,
+          propertyData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast({ title: "Success", description: "Property updated successfully" });
       } else {
-        const { error } = await supabase
-          .from("properties")
-          .insert([propertyData]);
-
-        if (error) throw error;
-        toast({
-          title: "Success",
-          description: "Property created successfully",
-        });
+        await axios.post(
+          `${API_BASE_URL}/api/property/add`,
+          propertyData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast({ title: "Success", description: "Property created successfully" });
       }
 
       resetForm();
       setIsDialogOpen(false);
       fetchProperties();
+            
     } catch (error) {
       console.error("Error saving property:", error);
       toast({
@@ -125,6 +195,7 @@ const PropertyManagement = () => {
       is_active: true,
     });
     setSelectedProperty(null);
+    setErrors({});
   };
 
   const editProperty = (property: Property) => {
@@ -137,7 +208,9 @@ const PropertyManagement = () => {
       amenities: property.amenities?.join(", ") || "",
       is_active: property.is_active,
     });
+    
     setIsDialogOpen(true);
+    setErrors({});
   };
 
   const deleteProperty = async (propertyId: string) => {
@@ -146,16 +219,14 @@ const PropertyManagement = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from("properties")
-        .delete()
-        .eq("id", propertyId);
-
-      if (error) throw error;
-      toast({
-        title: "Success",
-        description: "Property deleted successfully",
+      await axios.delete(`${API_BASE_URL}/api/property/delete/${propertyId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
+      toast({title: "Success",description: "Property deleted successfully",});
+
       fetchProperties();
     } catch (error) {
       console.error("Error deleting property:", error);
@@ -200,19 +271,20 @@ const PropertyManagement = () => {
                     <Input
                       id="name"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
                       placeholder="Enter property name"
-                      required
                     />
+                    {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="address">Address</Label>
                     <Input
                       id="address"
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) => handleInputChange("address", e.target.value)}
                       placeholder="Enter property address"
                     />
+                    {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -220,20 +292,22 @@ const PropertyManagement = () => {
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
                     placeholder="Enter property description"
                     rows={3}
                   />
+                  {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="images">Images (comma-separated URLs)</Label>
                   <Textarea
                     id="images"
                     value={formData.images}
-                    onChange={(e) => setFormData({ ...formData, images: e.target.value })}
+                    onChange={(e) => handleInputChange("images", e.target.value)}
                     placeholder="Enter image URLs separated by commas"
                     rows={2}
                   />
+                  {errors.images && <p className="text-red-500 text-sm">{errors.images}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="amenities">Amenities (comma-separated)</Label>
@@ -254,7 +328,7 @@ const PropertyManagement = () => {
                   <Label htmlFor="is_active">Active Property</Label>
                 </div>
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => {resetForm();setIsLoading(false);setIsDialogOpen(false)}}>
                     Cancel
                   </Button>
                   <Button type="submit" disabled={isLoading}>
@@ -322,7 +396,7 @@ const PropertyManagement = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(property.created_at).toLocaleDateString()}
+                      {new Date(property.createdAt).toLocaleDateString("en-IN")}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">

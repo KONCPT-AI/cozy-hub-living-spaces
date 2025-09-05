@@ -2,6 +2,8 @@
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -25,22 +27,22 @@ import AdminLogin from "./pages/AdminLogin";
 import UserDashboard from "./pages/user/Dashboard";
 import UserProfile from "./pages/user/Profile";
 import BrowseRooms from "./pages/user/BrowseRooms";
-import MyBookings from "./pages/user/MyBookings";
-import Payments from "./pages/user/Payments";
-import Support from "./pages/user/Support";
-import UserEvents from "./pages/user/Events";
-import AccessHistory from "./pages/user/AccessHistory";
+// import MyBookings from "./pages/user/MyBookings";
+// import Payments from "./pages/user/Payments";
+// import Support from "./pages/user/Support";
+// import UserEvents from "./pages/user/Events";
+// import AccessHistory from "./pages/user/AccessHistory";
 
 // Admin Dashboard Pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import PropertyManagement from "./pages/admin/PropertyManagement";
 import RoomManagement from "./pages/admin/RoomManagement";
-import BookingManagement from "./pages/admin/BookingManagement";
-import PaymentManagement from "./pages/admin/PaymentManagement";
-import TicketManagement from "./pages/admin/TicketManagement";
-import EventManagement from "./pages/admin/EventManagement";
-import Reports from "./pages/admin/Reports";
+// import BookingManagement from "./pages/admin/BookingManagement";
+// import PaymentManagement from "./pages/admin/PaymentManagement";
+// import TicketManagement from "./pages/admin/TicketManagement";
+// import EventManagement from "./pages/admin/EventManagement";
+// import Reports from "./pages/admin/Reports";
 import AccessLogManagement from "./pages/admin/AccessLogManagement";
 
 import NotFound from "./pages/NotFound";
@@ -52,6 +54,17 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <ToastContainer 
+        position="top-right" 
+        autoClose={3000} 
+        hideProgressBar={false} 
+        newestOnTop={false} 
+        closeOnClick 
+        rtl={false} 
+        pauseOnFocusLoss 
+        draggable 
+        pauseOnHover 
+      />
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -83,7 +96,7 @@ const App = () => (
                 <BrowseRooms />
               </ProtectedUserRoute>
             } />
-            <Route path="/user/bookings" element={
+            {/* <Route path="/user/bookings" element={
               <ProtectedUserRoute>
                 <MyBookings />
               </ProtectedUserRoute>
@@ -97,8 +110,8 @@ const App = () => (
               <ProtectedUserRoute>
                 <Support />
               </ProtectedUserRoute>
-            } />
-            <Route path="/user/events" element={
+            } /> */}
+            {/* <Route path="/user/events" element={
               <ProtectedUserRoute>
                 <UserEvents />
               </ProtectedUserRoute>
@@ -107,7 +120,7 @@ const App = () => (
               <ProtectedUserRoute>
                 <AccessHistory />
               </ProtectedUserRoute>
-            } />
+            } /> */}
 
             {/* Protected Admin Dashboard Routes */}
             <Route path="/admin/dashboard" element={
@@ -120,22 +133,22 @@ const App = () => (
                 <UserManagement />
               </ProtectedAdminRoute>
             } />
-            <Route path="/admin/properties" element={
+             <Route path="/admin/properties" element={
               <ProtectedAdminRoute>
                 <PropertyManagement />
               </ProtectedAdminRoute>
             } />
-            <Route path="/admin/rooms" element={
+             <Route path="/admin/rooms" element={
               <ProtectedAdminRoute>
                 <RoomManagement />
               </ProtectedAdminRoute>
             } />
-            <Route path="/admin/bookings" element={
+            {/*<Route path="/admin/bookings" element={
               <ProtectedAdminRoute>
                 <BookingManagement />
               </ProtectedAdminRoute>
-            } />
-            <Route path="/admin/payments" element={
+            } /> */}
+            {/* <Route path="/admin/payments" element={
               <ProtectedAdminRoute>
                 <PaymentManagement />
               </ProtectedAdminRoute>
@@ -154,7 +167,7 @@ const App = () => (
               <ProtectedAdminRoute>
                 <Reports />
               </ProtectedAdminRoute>
-            } />
+            } /> */}
             <Route path="/admin/access-logs" element={
               <ProtectedAdminRoute>
                 <AccessLogManagement />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,47 +8,65 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Building, Plus, Edit, Trash2, Eye } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Building, Plus, Edit, Trash2 } from 'lucide-react';
+import axios from "axios";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/AdminLayout';
+import { useAuth } from "@/contexts/AuthContext";
+
+interface RoomFormData {
+  propertyId: number | null;
+  roomNumber: number;
+  roomType: string;
+  capacity: number;
+  monthlyRent: number;
+  depositAmount: number;
+  preferredUserType: string;
+  amenities: string;
+  description: string;
+  availableForBooking: boolean;
+  floorNumber?: number | null;
+}
 
 const RoomManagement = () => {
-  const [rooms, setRooms] = useState([]);
+  const [rooms, setRooms] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState(null);
-  const [formData, setFormData] = useState({
-    room_number: '',
-    room_type: 'single',
+  const [selectedRoom, setSelectedRoom] = useState<any>(null);
+  const [formData, setFormData] = useState<RoomFormData>({
+    propertyId: null,
+    roomNumber: null,
+    roomType: 'single',
     capacity: 1,
-    price_per_month: '',
-    deposit_amount: '',
-    floor_number: '',
+    monthlyRent: 0,
+    depositAmount: 0,
+    floorNumber: null,
     description: '',
     amenities: '',
-    is_available: true,
-    preferred_user_type: 'student',
-    property_id: ''
+    availableForBooking: true,
+    preferredUserType: 'student',
   });
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState<any>({});
+  const [properties, setProperties] = useState<any[]>([]);
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();  
+  const token = user?.token;   
 
   useEffect(() => {
     fetchRooms();
     fetchProperties();
   }, []);
 
+
   const fetchProperties = async () => {
     try {
-      const { data, error } = await supabase
-        .from('properties')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setProperties(data || []);
+      const response = await axios.get(`${API_BASE_URL}/api/property/getAll`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setProperties(response.data);
     } catch (error) {
       console.error('Error fetching properties:', error);
     }
@@ -57,61 +74,118 @@ const RoomManagement = () => {
 
   const fetchRooms = async () => {
     try {
-      const { data, error } = await supabase
-        .from('rooms')
-        .select(`
-          *,
-          properties (
-            id,
-            name
-          )
-        `)
-        .order('room_number');
-
-      if (error) throw error;
-      setRooms(data || []);
-      setLoading(false);
+      const response = await axios.get(`${API_BASE_URL}/api/rooms/getall`);
+      setRooms(response.data.rooms || []);
     } catch (error) {
       console.error('Error fetching rooms:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch rooms',
-        variant: 'destructive',
-      });
-      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
+  const validateField = (field: string, value: any) => {
+  let message = "";
+
+  if(field === "propertyId") {
+    if (!value) message = "Property is required";
+  }
+
+  if (field === "roomNumber") {
+    if (!value) message = "Room number is required";
+    else if (value <= 0) message = "Room number must be greater than 0";
+  }
+
+  if(field === "roomType") {
+    if (!value) message = "Room type is required";
+  }
+
+  if (field === "capacity") {
+    if (!value || value < 1) message = "Capacity must be at least 1";
+  }
+
+  if (field === "floorNumber") {
+    if (!value) message = "Floor number is required";
+    else if (!value || value < 1) message = "Floor number must be at least 1";
+  }
+
+  if (field === "monthlyRent") {
+    if (value === null || isNaN(value)) {
+    message = "Monthly rent is required";
+  } else if (value < 0) {
+    message = "Monthly rent cannot be negative";
+  }
+  }
+
+  if (field === "depositAmount") {
+    if (value === null || isNaN(value)) {
+    message = "Deposit amount is required";
+  } else if (value < 0) {
+    message = "Deposit amount cannot be negative";
+  }
+  }
+
+  if (field === "description") {
+  if (value.trim() && !/^[a-zA-Z\s,.'-]{10,500}$/.test(value.trim())) {
+    message = "Description must be 10 to 500 characters long";
+  }
+  }
+
+  return message;
+  };
+
+  const handleInputChange = (field: string, value: any) => {
+  const updatedData = { ...formData, [field]: value };
+  setFormData(updatedData);
+
+  const message = validateField(field, value);
+  setErrors((prev: any) => ({
+    ...prev,
+    [field]: message
+  }));
+  };
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    Object.keys(formData).forEach((field) => {
+      const value = (formData as any)[field];
+      const message = validateField(field, value);
+      if (message) newErrors[field] = message;
+    });
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+
+    if (!validateForm()){
+       setIsLoading(false);
+       return;
+    }
     
     const roomData = {
-      room_number: formData.room_number,
-      room_type: formData.room_type as "single" | "shared" | "studio",
-      capacity: parseInt(formData.capacity.toString()),
-      price_per_month: parseFloat(formData.price_per_month),
-      deposit_amount: parseFloat(formData.deposit_amount),
-      floor_number: formData.floor_number ? parseInt(formData.floor_number.toString()) : null,
+      propertyId: formData.propertyId,
+      roomNumber: formData.roomNumber,
+      roomType: formData.roomType,
+      capacity: formData.capacity,
+      monthlyRent: formData.monthlyRent,
+      depositAmount: formData.depositAmount,
+      floorNumber: formData.floorNumber,
       description: formData.description || null,
-      amenities: formData.amenities ? formData.amenities.split(',').map(a => a.trim()) : null,
-      is_available: formData.is_available,
-      preferred_user_type: formData.preferred_user_type as "student" | "professional",
-      property_id: formData.property_id || null,
+      amenities: formData.amenities?.trim() || "",
+      availableForBooking: formData.availableForBooking,
+      preferredUserType: formData.preferredUserType,
     };
 
     try {
       if (selectedRoom) {
-        const { error } = await supabase
-          .from('rooms')
-          .update(roomData)
-          .eq('id', selectedRoom.id);
-        if (error) throw error;
+        await axios.put(`${API_BASE_URL}/api/rooms/${selectedRoom.id}`, roomData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         toast({ title: 'Success', description: 'Room updated successfully' });
       } else {
-        const { error } = await supabase
-          .from('rooms')
-          .insert(roomData);
-        if (error) throw error;
+        await axios.post(`${API_BASE_URL}/api/rooms/add`, roomData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         toast({ title: 'Success', description: 'Room created successfully' });
       }
       
@@ -119,11 +193,14 @@ const RoomManagement = () => {
       setSelectedRoom(null);
       resetForm();
       fetchRooms();
-    } catch (error) {
+    } catch (error:any) {
       console.error('Error saving room:', error);
+      const backendMessage =     error.response?.data?.message ||      error.response?.data?.error ||
+      (Array.isArray(error.response?.data?.errors) ? error.response.data.errors[0].msg : null);
+
       toast({
         title: 'Error',
-        description: 'Failed to save room',
+        description: backendMessage || 'Failed to save room',
         variant: 'destructive',
       });
     }
@@ -131,48 +208,47 @@ const RoomManagement = () => {
 
   const resetForm = () => {
     setFormData({
-      room_number: '',
-      room_type: 'single',
+      propertyId: null,
+      roomNumber: null,
+      roomType: 'single',
       capacity: 1,
-      price_per_month: '',
-      deposit_amount: '',
-      floor_number: '',
+      monthlyRent: 0,
+      depositAmount: 0,
+      floorNumber: null,
       description: '',
       amenities: '',
-      is_available: true,
-      preferred_user_type: 'student',
-      property_id: ''
+      availableForBooking: true,
+      preferredUserType: 'student',
     });
+        setErrors({});
   };
 
-  const editRoom = (room) => {
+  const editRoom = (room: any) => {
     setSelectedRoom(room);
     setFormData({
-      room_number: room.room_number,
-      room_type: room.room_type,
+      propertyId: room.propertyId,
+      roomNumber: room.roomNumber,
+      roomType: room.roomType,
       capacity: room.capacity,
-      price_per_month: room.price_per_month.toString(),
-      deposit_amount: room.deposit_amount.toString(),
-      floor_number: room.floor_number?.toString() || '',
+      monthlyRent: room.monthlyRent,
+      depositAmount: room.depositAmount,
+      floorNumber: room.floorNumber || null,
       description: room.description || '',
-      amenities: room.amenities?.join(', ') || '',
-      is_available: room.is_available,
-      preferred_user_type: room.preferred_user_type || 'student',
-      property_id: room.property_id || ''
+      amenities:  room.amenities || '',
+      availableForBooking: room.availableForBooking,
+      preferredUserType: room.preferredUserType || 'student',
     });
     setIsDialogOpen(true);
+        setErrors({});
   };
 
-  const deleteRoom = async (roomId) => {
+  const deleteRoom = async (roomId: number) => {
     if (!confirm('Are you sure you want to delete this room?')) return;
-    
-    try {
-      const { error } = await supabase
-        .from('rooms')
-        .delete()
-        .eq('id', roomId);
       
-      if (error) throw error;
+    try {
+      await axios.delete(`${API_BASE_URL}/api/rooms/${roomId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       toast({ title: 'Success', description: 'Room deleted successfully' });
       fetchRooms();
     } catch (error) {
@@ -205,34 +281,45 @@ const RoomManagement = () => {
                 <DialogTitle>{selectedRoom ? 'Edit Room' : 'Add New Room'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Property Dropdown */}
                 <div>
                   <Label htmlFor="property_id">Property</Label>
-                  <Select value={formData.property_id} onValueChange={(value) => setFormData({...formData, property_id: value})}>
+                  <Select
+                    value={formData.propertyId ? String(formData.propertyId) : ""}
+                    onValueChange={(value) => setFormData({...formData, propertyId: Number(value)})}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a property" />
                     </SelectTrigger>
                     <SelectContent>
                       {properties.map((property) => (
-                        <SelectItem key={property.id} value={property.id}>
+                        <SelectItem key={property.id} value={String(property.id)}>
                           {property.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.propertyId && <p className="text-red-500 text-sm">{errors.propertyId}</p>}
                 </div>
+
+                {/* Room fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="room_number">Room Number</Label>
                     <Input
                       id="room_number"
-                      value={formData.room_number}
-                      onChange={(e) => setFormData({...formData, room_number: e.target.value})}
-                      required
+                      type='number'
+                      value={formData.roomNumber ?? ""}
+                      onChange={(e) => handleInputChange("roomNumber", Number(e.target.value) || null)}
                     />
+                    {errors.roomNumber && <p className="text-red-500 text-sm">{errors.roomNumber}</p>}
                   </div>
                   <div>
                     <Label htmlFor="room_type">Room Type</Label>
-                    <Select value={formData.room_type} onValueChange={(value) => setFormData({...formData, room_type: value})}>
+                    <Select
+                      value={formData.roomType}
+                      onValueChange={(value) => setFormData({...formData, roomType: value})}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -250,45 +337,47 @@ const RoomManagement = () => {
                       type="number"
                       min="1"
                       value={formData.capacity}
-                      onChange={(e) => setFormData({...formData, capacity: parseInt(e.target.value) || 1})}
-                      required
+                      onChange={(e) => handleInputChange("capacity", Number(e.target.value) || 1)}
                     />
+                    {errors.capacity && <p className="text-red-500 text-sm">{errors.capacity}</p>}
                   </div>
                   <div>
                     <Label htmlFor="floor_number">Floor Number</Label>
                     <Input
                       id="floor_number"
                       type="number"
-                      value={formData.floor_number}
-                      onChange={(e) => setFormData({...formData, floor_number: e.target.value})}
-                    />
+                      value={formData.floorNumber ?? ""}
+                      onChange={(e) => handleInputChange("floorNumber", e.target.value ? Number(e.target.value) : null)}
+                    />{errors.floorNumber && <p className="text-red-500 text-sm">{errors.floorNumber}</p>}
                   </div>
                   <div>
-                    <Label htmlFor="price_per_month">Monthly Rent (₹)</Label>
+                    <Label htmlFor="monthlyRent">Monthly Rent (₹)</Label>
                     <Input
-                      id="price_per_month"
+                      id="monthlyRent"
                       type="number"
-                      step="0.01"
-                      value={formData.price_per_month}
-                      onChange={(e) => setFormData({...formData, price_per_month: e.target.value})}
-                      required
+                      value={formData.monthlyRent === null ? "" : formData.monthlyRent}
+                      onChange={(e) => handleInputChange("monthlyRent", e.target.value === "" ? null : Number(e.target.value))}
                     />
+                    {errors.monthlyRent && <p className="text-red-500 text-sm">{errors.monthlyRent}</p>}
                   </div>
                   <div>
-                    <Label htmlFor="deposit_amount">Deposit Amount (₹)</Label>
+                    <Label htmlFor="depositAmount">Deposit Amount (₹)</Label>
                     <Input
-                      id="deposit_amount"
+                      id="depositAmount"
                       type="number"
-                      step="0.01"
-                      value={formData.deposit_amount}
-                      onChange={(e) => setFormData({...formData, deposit_amount: e.target.value})}
-                      required
+                      value={formData.depositAmount === null ? "" : formData.depositAmount}
+                      onChange={(e) => handleInputChange("depositAmount", e.target.value === "" ? null : Number(e.target.value))}
                     />
+                    {errors.depositAmount && <p className="text-red-500 text-sm">{errors.depositAmount}</p>}
                   </div>
                 </div>
+
                 <div>
                   <Label htmlFor="preferred_user_type">Preferred User Type</Label>
-                  <Select value={formData.preferred_user_type} onValueChange={(value) => setFormData({...formData, preferred_user_type: value})}>
+                  <Select
+                    value={formData.preferredUserType}
+                    onValueChange={(value) => setFormData({...formData, preferredUserType: value})}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -298,6 +387,7 @@ const RoomManagement = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
                   <Label htmlFor="amenities">Amenities (comma-separated)</Label>
                   <Input
@@ -312,17 +402,17 @@ const RoomManagement = () => {
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  />
+                    onChange={(e) => handleInputChange("description", e.target.value)}
+                  />{errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
                 </div>
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    id="is_available"
-                    checked={formData.is_available}
-                    onChange={(e) => setFormData({...formData, is_available: e.target.checked})}
+                    id="availableForBooking"
+                    checked={formData.availableForBooking}
+                    onChange={(e) => setFormData({...formData, availableForBooking: e.target.checked})}
                   />
-                  <Label htmlFor="is_available">Available for booking</Label>
+                  <Label htmlFor="availableForBooking">Available for booking</Label>
                 </div>
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -337,6 +427,7 @@ const RoomManagement = () => {
           </Dialog>
         </div>
 
+        {/* Room Table */}
         <Card>
           <CardHeader>
             <CardTitle>All Rooms ({rooms.length})</CardTitle>
@@ -358,29 +449,21 @@ const RoomManagement = () => {
               <TableBody>
                 {rooms.map((room) => (
                   <TableRow key={room.id}>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {room.properties?.name || 'No Property'}
-                    </TableCell>
-                    <TableCell className="font-medium">{room.room_number}</TableCell>
+                    <TableCell>{room.property || 'No Property'}</TableCell>
+                    <TableCell>{room.roomNumber}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{room.room_type}</Badge>
+                      <Badge variant="outline">{room.roomType}</Badge>
                     </TableCell>
                     <TableCell>{room.capacity}</TableCell>
-                    <TableCell>₹{room.price_per_month.toLocaleString()}</TableCell>
+                    <TableCell>₹{Number(room.monthlyRent || 0).toLocaleString()}</TableCell>
                     <TableCell>
-                      <Badge variant={room.is_available ? 'default' : 'destructive'}>
-                        {room.is_available ? 'Available' : 'Unavailable'}
+                      <Badge variant={room.status === 'available' ? 'default' : 'destructive'}>
+                        {room.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {room.current_occupancy || 0}/{room.capacity}
-                    </TableCell>
+                    <TableCell>{room.occupancy || `0/${room.capacity}`}</TableCell>
                     <TableCell className="space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => editRoom(room)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => editRoom(room)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button

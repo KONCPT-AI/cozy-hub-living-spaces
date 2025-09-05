@@ -7,13 +7,12 @@ import {
   Building, 
   Calendar, 
   CreditCard, 
-  Ticket, 
-  TrendingUp,
   AlertTriangle,
   CheckCircle 
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/AdminLayout';
+import axios from "axios";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -39,24 +38,24 @@ const AdminDashboard = () => {
     try {
       // Fetch various statistics
       const [
-        usersResult,
-        roomsResult,
-        bookingsResult,
-        paymentsResult,
-        ticketsResult
+        usersRes,
+        roomsRes,
+        bookingsRes,
+        paymentsRes,
+        ticketsRes,
       ] = await Promise.all([
-        supabase.from('profiles').select('*'),
-        supabase.from('rooms').select('*'),
-        supabase.from('bookings').select('*'),
-        supabase.from('payments').select('*'),
-        supabase.from('maintenance_tickets').select('*')
+        axios.get("/api/users"),
+        axios.get("/api/rooms"),
+        axios.get("/api/bookings"),
+        axios.get("/api/payments"),
+        axios.get("/api/tickets"),
       ]);
 
-      const users = usersResult.data || [];
-      const rooms = roomsResult.data || [];
-      const bookings = bookingsResult.data || [];
-      const payments = paymentsResult.data || [];
-      const tickets = ticketsResult.data || [];
+      const users = usersRes.data || [];
+      const rooms = roomsRes.data || [];
+      const bookings = bookingsRes.data || [];
+      const payments = paymentsRes.data || [];
+      const tickets = ticketsRes.data || [];
 
       setStats({
         totalUsers: users.length,

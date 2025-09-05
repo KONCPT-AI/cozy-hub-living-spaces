@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -15,18 +14,13 @@ import {
   Filter,
   MapPin, 
   Users, 
-  Wifi, 
-  Car, 
-  Coffee, 
-  Star,
   Heart,
   Eye,
   Calendar,
-  DollarSign,
-  X,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import axios from 'axios';
 
 interface Room {
   id: string;
@@ -69,51 +63,30 @@ const BrowseRooms = () => {
   const [isBooking, setIsBooking] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const baseURL = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
     fetchRooms();
   }, []);
 
   const fetchRooms = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('rooms')
-        .select(`
-          *,
-          properties (
-            id,
-            name,
-            address,
-            amenities,
-            images
-          )
-        `)
-        .eq('is_available', true)
-        .order('created_at', { ascending: false });
+  try {
+    setLoading(true);
+    const res = await axios.get(`${baseURL}/api/rooms/getall?available=true`);
+    setRooms(res.data.rooms);
+    console.log(res.data.rooms);
+  } catch (error) {
+    console.error('Error fetching rooms:', error);
+    toast({
+      title: "Error",
+      description: "Failed to load rooms. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-      if (error) {
-        console.error('Error fetching rooms:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load rooms. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setRooms(data || []);
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load rooms. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const typeFilters = [
     { label: 'All Types', value: 'all' },
@@ -172,29 +145,20 @@ const BrowseRooms = () => {
 
     setIsBooking(true);
     try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert({
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           user_id: user.id,
           room_id: selectedRoom.id,
           check_in_date: checkInDate,
-          check_out_date: checkOutDate,
+          check_out_date: checkOutDate || null,
           monthly_rent: selectedRoom.price_per_month,
           status: 'pending',
-          notes: bookingNotes || null
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating booking:', error);
-        toast({
-          title: "Booking Failed",
-          description: "Failed to create booking. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
+          notes: bookingNotes || null,
+        }),
+      });if (!res.ok) throw new Error('Failed to create booking');
+      await res.json();
 
       toast({
         title: "Booking Submitted",
@@ -212,7 +176,7 @@ const BrowseRooms = () => {
       });
     } finally {
       setIsBooking(false);
-    }
+    } 
   };
 
   const nextImage = () => {
@@ -272,7 +236,9 @@ const BrowseRooms = () => {
             </div>
 
             {/* Type Filter */}
+            
             <select
+              aria-label='Room Type'
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -286,6 +252,7 @@ const BrowseRooms = () => {
 
             {/* Price Filter */}
             <select
+              aria-label='Price Range'
               value={priceRange}
               onChange={(e) => setPriceRange(e.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

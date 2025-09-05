@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Eye, Settings, AlertTriangle, Clock, UserCheck } from "lucide-react";
 
@@ -78,54 +77,25 @@ export default function AccessLogManagement() {
     setIsLoading(true);
     try {
       // Fetch properties
-      const { data: propertiesData, error: propertiesError } = await supabase
-        .from("properties")
-        .select("id, name")
-        .eq("is_active", true);
-
-      if (propertiesError) throw propertiesError;
+       const propRes = await fetch("/api/accessLogs/properties");
+      const propertiesData = await propRes.json();
       setProperties(propertiesData || []);
 
-      // Fetch access logs with filters
-      let logsQuery = supabase
-        .from("check_in_out_logs")
-        .select(`
-          *,
-          profiles(full_name, email),
-          properties(name),
-          rooms(room_number)
-        `)
-        .order("timestamp", { ascending: false })
-        .limit(100);
+     // Fetch access logs with filters
+      let query = `/api/accessLogs/logs?`;
+      if (selectedProperty !== "all") query += `propertyId=${selectedProperty}&`;
+      if (selectedAuthMethod !== "all") query += `authMethod=${selectedAuthMethod}&`;
+      if (searchDate) query += `date=${searchDate}&`;
 
-      if (selectedProperty && selectedProperty !== "all") {
-        logsQuery = logsQuery.eq("property_id", selectedProperty);
-      }
-      if (selectedAuthMethod && selectedAuthMethod !== "all") {
-        logsQuery = logsQuery.eq("authentication_method", selectedAuthMethod);
-      }
-      if (searchDate) {
-        const startDate = new Date(searchDate);
-        const endDate = new Date(searchDate);
-        endDate.setDate(endDate.getDate() + 1);
-        logsQuery = logsQuery.gte("timestamp", startDate.toISOString()).lt("timestamp", endDate.toISOString());
-      }
-
-      const { data: logsData, error: logsError } = await logsQuery;
-      if (logsError) throw logsError;
-      setLogs((logsData as any) || []);
+      const logRes = await fetch(query);
+      const logsData = await logRes.json();
+      setLogs(logsData || []);
 
       // Fetch property settings
-      const { data: settingsData, error: settingsError } = await supabase
-        .from("property_settings")
-        .select(`
-          *,
-          properties(name)
-        `);
-
-      if (settingsError) throw settingsError;
-      setPropertySettings((settingsData as any) || []);
-
+      const settingsRes = await fetch("/api/accessLogs/settings");
+      const settingsData = await settingsRes.json();
+      setPropertySettings(settingsData || []);
+       
     } catch (error: any) {
       toast({
         title: "Error",
@@ -146,23 +116,22 @@ export default function AccessLogManagement() {
         .map(email => email.trim())
         .filter(email => email);
 
-      const { error } = await supabase
-        .from("property_settings")
-        .upsert({
+      const res = await fetch("/api/accessLogs/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           property_id: selectedPropertyForSettings,
           curfew_start_time: curfewStart,
           curfew_end_time: curfewEnd,
           late_entry_notifications_enabled: notificationsEnabled,
           notification_recipients: emailsList,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Property settings saved successfully",
+        }),
       });
 
+       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save settings");
+
+      toast({ title: "Success", description: "Property settings saved successfully" });
       setSettingsDialogOpen(false);
       fetchData();
     } catch (error: any) {
