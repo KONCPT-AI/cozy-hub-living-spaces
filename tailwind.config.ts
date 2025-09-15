@@ -18,6 +18,12 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				'cabinet': ['Cabinet Grotesk', 'system-ui', 'sans-serif'],
+				'source-serif': ['Source Serif Pro', 'Georgia', 'serif'],
+				'heading': ['Cabinet Grotesk', 'system-ui', 'sans-serif'],
+				'body': ['Source Serif Pro', 'Georgia', 'serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -85,7 +91,7 @@ export default {
 				'soft': 'var(--shadow-soft)',
 				'medium': 'var(--shadow-medium)',
 				'strong': 'var(--shadow-strong)',
-				'orange-glow': 'var(--shadow-orange-glow)'
+				'warm-glow': 'var(--shadow-warm-glow)'
 			},
 			transitionProperty: {
 				'smooth': 'var(--transition-smooth)',
