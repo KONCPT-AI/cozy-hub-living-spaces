@@ -2,38 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Co-living Space Management System Design System */
+/* COCO Living Brand Design System */
 
 @layer base {
   :root {
-    /* COCO Living Brand Colors - Warm Brown Theme */
-    --primary: 25 35% 25%;         /* Rich Brown #5A4133 */
-    --primary-foreground: 36 67% 94%;  /* Light Beige #F4EEEA */
+    /* COCO Living Brand Colors - Exact Brand Palette */
+    --primary: 25 65% 10%;         /* Dark Brown #22110A - main headings, accents */
+    --primary-foreground: 32 35% 90%;  /* Ivory #EDE7DF - text on dark */
     
-    --secondary: 32 50% 80%;       /* Warm Beige #E5D5C8 */
-    --secondary-foreground: 25 35% 25%;  /* Brown text on beige */
+    --secondary: 37 35% 75%;       /* Beige #D1C1AA - backgrounds, soft highlights */
+    --secondary-foreground: 25 40% 22%;  /* Deep Brown #4F3421 - text on beige */
     
-    --accent: 35 45% 70%;          /* Medium Beige #C9B299 */
-    --accent-foreground: 25 35% 25%;     /* Brown */
+    --accent: 32 25% 58%;          /* Warm Taupe #AC9478 - secondary highlights */
+    --accent-foreground: 25 65% 10%;     /* Dark Brown */
     
-    --muted: 35 30% 88%;           /* Light Warm Beige #E8DDD4 */
-    --muted-foreground: 25 25% 35%; /* Medium Brown #6B5B4F */
+    --muted: 32 35% 90%;           /* Ivory #EDE7DF - minimal backgrounds */
+    --muted-foreground: 25 40% 22%; /* Deep Brown #4F3421 - body text */
     
-    --background: 36 40% 92%;      /* Very Light Beige #F2E8DC */
-    --foreground: 25 35% 25%;      /* Rich Brown #5A4133 */
+    --background: 32 35% 90%;      /* Ivory #EDE7DF - base backgrounds */
+    --foreground: 25 40% 22%;      /* Deep Brown #4F3421 - body text */
     
-    --card: 0 0% 100%;             /* White cards */
-    --card-foreground: 25 35% 25%; 
+    --card: 0 0% 100%;             /* White cards for contrast */
+    --card-foreground: 25 40% 22%;  /* Deep Brown #4F3421 */
     
     --popover: 0 0% 100%;
-    --popover-foreground: 25 35% 25%;
+    --popover-foreground: 25 40% 22%;
     
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 35 25% 85%;          /* Light beige border */
-    --input: 35 25% 85%;
-    --ring: 25 35% 25%;            /* Brown focus ring */
+    --border: 37 35% 80%;          /* Beige #D1C1AA borders */
+    --input: 37 35% 80%;
+    --ring: 25 65% 10%;            /* Dark Brown #22110A focus ring */
     
     --success: 142 71% 45%;        /* Green for success states */
     --success-foreground: 0 0% 98%;
@@ -46,30 +46,30 @@
 
     --radius: 0.75rem;
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(25 35% 25%), hsl(25 35% 35%));
-    --gradient-secondary: linear-gradient(135deg, hsl(32 50% 80%), hsl(32 50% 85%));
-    --gradient-hero: linear-gradient(135deg, hsl(36 40% 92%) 0%, hsl(32 50% 80%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(36 67% 97%) 100%);
+    /* Gradients - Brand Aligned */
+    --gradient-primary: linear-gradient(135deg, hsl(25 65% 10%), hsl(25 40% 22%));
+    --gradient-secondary: linear-gradient(135deg, hsl(37 35% 75%), hsl(32 35% 90%));
+    --gradient-hero: linear-gradient(135deg, hsl(32 35% 90%) 0%, hsl(37 35% 75%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(32 35% 95%) 100%);
     
-    /* Shadows */
-    --shadow-soft: 0 4px 20px hsl(25 35% 25% / 0.08);
-    --shadow-medium: 0 8px 30px hsl(25 35% 25% / 0.12);
-    --shadow-strong: 0 16px 40px hsl(25 35% 25% / 0.16);
-    --shadow-orange-glow: 0 0 30px hsl(25 35% 25% / 0.3);
+    /* Shadows - Minimal & Soft */
+    --shadow-soft: 0 2px 15px hsl(25 65% 10% / 0.06);
+    --shadow-medium: 0 4px 25px hsl(25 65% 10% / 0.08);
+    --shadow-strong: 0 8px 35px hsl(25 65% 10% / 0.12);
+    --shadow-warm-glow: 0 0 25px hsl(32 25% 58% / 0.2);
     
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --sidebar-background: 36 40% 96%;    /* Very light warm beige */
-    --sidebar-foreground: 25 35% 25%;    /* Rich brown */
-    --sidebar-primary: 25 35% 25%;       /* Rich brown */
-    --sidebar-primary-foreground: 36 67% 94%;  /* Light beige */
-    --sidebar-accent: 35 30% 88%;        /* Light warm beige */
-    --sidebar-accent-foreground: 25 35% 25%;   /* Rich brown */
-    --sidebar-border: 35 25% 85%;        /* Light beige border */
-    --sidebar-ring: 25 35% 25%;          /* Brown ring */
+    --sidebar-background: 32 35% 95%;    /* Very light ivory */
+    --sidebar-foreground: 25 40% 22%;    /* Deep brown #4F3421 */
+    --sidebar-primary: 25 65% 10%;       /* Dark brown #22110A */
+    --sidebar-primary-foreground: 32 35% 90%;  /* Ivory #EDE7DF */
+    --sidebar-accent: 37 35% 75%;        /* Beige #D1C1AA */
+    --sidebar-accent-foreground: 25 40% 22%;   /* Deep brown */
+    --sidebar-border: 37 35% 80%;        /* Beige border */
+    --sidebar-ring: 25 65% 10%;          /* Dark brown ring */
   }
 
   .dark {
@@ -117,6 +117,20 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body;
   }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+/* custome utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  
+  scrollbar-width: none;     
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             
 }

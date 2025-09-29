@@ -6,13 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Home, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import axios from 'axios';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 const Register = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    phone: '',
+    gender: '',
     password: '',
     confirmPassword: '',
     userType: 'student' as 'student' | 'professional'
@@ -41,6 +50,14 @@ const Register = () => {
         message = "Email is required";
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         message = "Enter a valid email address";
+      }
+    }
+
+    if (field === "phone") {
+      if (value && value.trim() !== "") {
+        if (!/^[0-9]{10}$/.test(value.trim())) {
+          message = "Enter a valid 10-digit phone number";
+        }
       }
     }
 
@@ -88,7 +105,7 @@ const Register = () => {
 
     try {
       setIsLoading(true);
-      const response = await axios.post(`${API_BASE_URL}/api/user/register`,formData);
+      const response = await axios.post(`${API_BASE_URL}/api/user/register`, formData);
 
       if (response.data.success) {
         toast({
@@ -106,38 +123,38 @@ const Register = () => {
     } catch (error: any) {
       console.error("Registration error:", error);
 
-  if (error.response && error.response.data) {
-    const data = error.response.data;
+      if (error.response && error.response.data) {
+        const data = error.response.data;
 
-    // agar backend ne errors array bheji hai
-    if (data.errors && Array.isArray(data.errors)) {
-      const formattedErrors: { [key: string]: string } = {};
-      data.errors.forEach((err: any) => {
-        if (err.path) {
-          formattedErrors[err.path] = err.msg;
+        // agar backend ne errors array bheji hai
+        if (data.errors && Array.isArray(data.errors)) {
+          const formattedErrors: { [key: string]: string } = {};
+          data.errors.forEach((err: any) => {
+            if (err.path) {
+              formattedErrors[err.path] = err.msg;
+            }
+          });
+          setErrors(formattedErrors);
+
+        } else if (data.message) {
+          // ek hi message mila hai
+          const formattedErrors: { [key: string]: string } = {};
+
+          if (data.message.toLowerCase().includes("exists")) {
+            // specific case: email already exists
+            formattedErrors["email"] = data.message;
+          } else if (data.message.toLowerCase().includes("name")) {
+            formattedErrors["fullName"] = data.message;
+          } else {
+            // agar kisi field se match nahi hota → global error
+            formattedErrors["general"] = data.message;
+          }
+          setErrors(formattedErrors);
         }
-      });
-      setErrors(formattedErrors);
-
-    } else if (data.message) {
-      // ek hi message mila hai
-      const formattedErrors: { [key: string]: string } = {};
-
-      if (data.message.toLowerCase().includes("exists")) {
-        // specific case: email already exists
-        formattedErrors["email"] = data.message;
-      } else if (data.message.toLowerCase().includes("name")) {
-        formattedErrors["fullName"] = data.message;
-      } else {
-        // agar kisi field se match nahi hota → global error
-        formattedErrors["general"] = data.message;
-      }
-      setErrors(formattedErrors);
-    }
       } else {
         setErrors({ general: "Something went wrong. Please try again." });
       }
-    }finally {
+    } finally {
       setIsLoading(false);
     }
 
@@ -147,7 +164,7 @@ const Register = () => {
     const updatedData = { ...formData, [field]: value };
     setFormData(updatedData);
 
-     const message = validateField(field, value, updatedData);
+    const message = validateField(field, value, updatedData);
     setErrors((prev) => ({
       ...prev,
       [field]: message
@@ -175,7 +192,7 @@ const Register = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-        
+
               {/* Full Name */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Full Name</label>
@@ -199,6 +216,36 @@ const Register = () => {
                   onChange={(e) => handleInputChange('email', e.target.value)}
                 />
                 {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+              </div>
+
+              {/* Gender */}
+              <div className="space-y-2">
+                <label htmlFor="gender" className="text-sm font-medium">Gender</label>
+                <Select
+                  onValueChange={(value) => handleInputChange('gender', value)}
+                  value={formData.gender}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="--Select Gender--" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Phone Number */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Phone Number</label>
+                <Input
+                  type="text"
+                  placeholder="Enter your 10-digit phone number"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                />
+                {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
               </div>
 
               {/* User Type Selection */}
@@ -306,3 +353,5 @@ const Register = () => {
 };
 
 export default Register;
+
+

@@ -74,7 +74,7 @@ const Login = () => {
       
     try {
       const res = await axios.post(`${API_BASE_URL}/api/common/login`, {
-        email,
+         email: email.trim(),
         password
       }); 
 
@@ -115,9 +115,9 @@ const Login = () => {
             <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center">
               <Home className="h-6 w-6 text-secondary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-primary-foreground">CoLiving</span>
+            <img src="/logo.png" alt="Logo" className="w-24 h-10 bg-gradient-primary rounded-lg object-contain" />
           </Link>
-          <p className="text-primary-foreground/80 mt-2">Welcome back to your community</p>
+          <p className="text-primary-foreground/80  mt-2">Welcome back to your community</p>
         </div>
 
         <Card className="border-0 shadow-strong">

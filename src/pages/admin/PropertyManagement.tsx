@@ -21,10 +21,10 @@ interface Property {
   name: string;
   address: string;
   description: string;
-  images: string[];
+  images?: (File | string)[];
+  removedImages?: string[];
   amenities: string[];
   is_active: boolean;
-
 }
 
 const PropertyManagement = () => {
@@ -36,10 +36,11 @@ const PropertyManagement = () => {
     name: "",
     address: "",
     description: "",
-    images: "",
+    images: [],
+    removedImages: [],
     amenities: "",
     is_active: true,
-  });
+  }); 
   const { toast } = useToast();
   const [errors, setErrors] = useState<any>({});
   const { user } = useAuth();  
@@ -73,15 +74,6 @@ const PropertyManagement = () => {
       if (desc !== "" && (desc.length < 10 || desc.length > 500)) {
         message = "Description must be 10 to 500 characters long";
       }
-    }
-
-    if (field === "images") {
-      if (!value) return "";
-      const urls = value.split(",").map(img => img.trim());
-      for (let url of urls) {
-        if (!/^https?:\/\/.+\..+/.test(url)) return "Enter valid image URLs";
-      }
-      return "";
     }
 
     return message;
@@ -136,35 +128,41 @@ const PropertyManagement = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    if (!validateForm()){
+     if (!validateForm()){
        setIsLoading(false);
        return;
     }
 
     try {
-      const propertyData = {
-        name: formData.name,
-        address: formData.address,
-        description: formData.description,
-        images: formData.images ? formData.images.split(",").map(img => img.trim()) : [],
-        amenities: formData.amenities ,
-        is_active: formData.is_active,
-      };
+      const dataToSend = new FormData();
+        dataToSend.append("name", formData.name.trim());
+        dataToSend.append("address", formData.address);
+        dataToSend.append("description", formData.description);
+        dataToSend.append("amenities", formData.amenities);
+        dataToSend.append("is_active", String(formData.is_active));
+        
+      //append images
+      formData.images?.forEach((img)=>{
+        if(img instanceof File) dataToSend.append("propertyImages",img);
+      })
+
+      //removed images (old URLs to delete)
+      formData.removedImages?.forEach((imgUrl)=>{
+        dataToSend.append("removedImages",imgUrl);
+      })
 
       if (selectedProperty) {
         await axios.put(
           `${API_BASE_URL}/api/property/edit/${selectedProperty.id}`,
-          propertyData,
-          { headers: { Authorization: `Bearer ${token}` } }
+          dataToSend,
+          { headers: { Authorization: `Bearer ${token}`,"Content-Type": "multipart/form-data" } }
         );
         toast({ title: "Success", description: "Property updated successfully" });
       } else {
         await axios.post(
           `${API_BASE_URL}/api/property/add`,
-          propertyData,
-          { headers: { Authorization: `Bearer ${token}` } }
+          dataToSend,
+          { headers: { Authorization: `Bearer ${token}`,"Content-Type": "multipart/form-data" } }
         );
         toast({ title: "Success", description: "Property created successfully" });
       }
@@ -173,13 +171,23 @@ const PropertyManagement = () => {
       setIsDialogOpen(false);
       fetchProperties();
             
-    } catch (error) {
-      console.error("Error saving property:", error);
+    } catch (error:any) {
+      if (error.response?.data?.errors) {
+        const backendErrors: any = {};
+        error.response.data.errors.forEach((e: any) => {
+          backendErrors[e.path] = e.msg;
+        }); 
+      setErrors(backendErrors);
+      toast({
+        title: "Error",
+        description: error.response.data.errors[0].msg,
+        variant: "destructive",
+      });}else {
       toast({
         title: "Error",
         description: "Failed to save property",
         variant: "destructive",
-      });
+      });}
     } finally {
       setIsLoading(false);
     }
@@ -190,7 +198,8 @@ const PropertyManagement = () => {
       name: "",
       address: "",
       description: "",
-      images: "",
+      images: [],
+      removedImages: [],
       amenities: "",
       is_active: true,
     });
@@ -204,9 +213,10 @@ const PropertyManagement = () => {
       name: property.name,
       address: property.address,
       description: property.description,
-      images: property.images?.join(", ") || "",
+      images: property.images || [],
       amenities: property.amenities?.join(", ") || "",
       is_active: property.is_active,
+      removedImages: []
     });
     
     setIsDialogOpen(true);
@@ -230,9 +240,10 @@ const PropertyManagement = () => {
       fetchProperties();
     } catch (error) {
       console.error("Error deleting property:", error);
+      const message =     error.response?.data?.message ||      "Failed to delete property";
       toast({
         title: "Error",
-        description: "Failed to delete property",
+        description: message,
         variant: "destructive",
       });
     }
@@ -298,19 +309,43 @@ const PropertyManagement = () => {
                   />
                   {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="images">Images (comma-separated URLs)</Label>
-                  <Textarea
-                    id="images"
-                    value={formData.images}
-                    onChange={(e) => handleInputChange("images", e.target.value)}
-                    placeholder="Enter image URLs separated by commas"
-                    rows={2}
-                  />
-                  {errors.images && <p className="text-red-500 text-sm">{errors.images}</p>}
+                {/* Images */}
+                    <div>
+                      <Label>Room Images</Label>
+                      <Input type="file" multiple accept="image/*" onChange={(e) => {
+                        if(e.target.files) {
+                          setFormData({ ...formData, images: [...(formData.images || []), ...Array.from(e.target.files)] });
+                        }
+                      }} />
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {/* image preview */}
+                        {formData.images?.map((img, idx) => {
+                          const src = img instanceof File ? URL.createObjectURL(img) :  `${API_BASE_URL}/${img.replace(/^\//, "")}`;;
+                          return (
+                            <div key={idx} className="relative">
+                              <img src={src} className="w-20 h-20 object-cover rounded" alt=""/>
+
+                              <button type="button" className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                                onClick={() =>{
+                                    const removed = formData.images![idx];
+                                    setFormData({ 
+                                      ...formData,
+                                      images: formData.images!.filter((_, i) => i !== idx) ,
+                                      removedImages: [
+                                        ...(formData.removedImages || []),
+                                        ...(removed instanceof File ? [] : [removed]) // sirf old string URLs ko bhejna hai
+                                      ]
+                                      })}
+                                } 
+                                  
+                              >✕</button>
+                            </div>
+                          );
+                        })}
+                      </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="amenities">Amenities (comma-separated)</Label>
+                  <Label htmlFor="amenities">Amenities</Label>
                   <Textarea
                     id="amenities"
                     value={formData.amenities}
