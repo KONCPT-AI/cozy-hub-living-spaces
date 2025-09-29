@@ -69,9 +69,10 @@ const AdminLogin = () => {
 
         if(data.success && data.account.role === 1){
           const adminUser:AdminUser={
-            id:data.account.id,
-            token:data.token,
-            role:"admin",
+            id: data.account.id,
+            token: data.token,
+            role: "admin",
+            userType: ''
           };
           setUser(adminUser);
           sessionStorage.setItem('user', JSON.stringify(adminUser));
@@ -128,8 +129,8 @@ const AdminLogin = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-secondary rounded-2xl mb-4">
-            <Shield className="h-8 w-8 text-secondary-foreground" />
+          <div className="inline-flex items-center justify-center w-16 h-16 ">
+            <img src="/logo.png" alt="Logo" className="w-24 h-15 " />
           </div>
           <h1 className="text-2xl font-bold text-primary-foreground">Admin Portal</h1>
           <p className="text-primary-foreground/80 mt-2">Secure administrative access</p>
@@ -169,7 +170,7 @@ const AdminLogin = () => {
               </div>
             )}
             {/* Demo Account */}
-            <div className="space-y-3">
+            {/* <div className="space-y-3">
               <p className="text-sm font-medium text-center">Try Demo Admin Account:</p>
               <Button
                 type="button"
@@ -184,7 +185,7 @@ const AdminLogin = () => {
               <div className="text-xs text-muted-foreground text-center">
                 Demo Admin: admin@demo.com / admin123
               </div>
-            </div>
+            </div> */}
 
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
@@ -267,11 +268,11 @@ const AdminLogin = () => {
         </Card>
 
         {/* Back to Home */}
-        <div className="text-center mt-6">
+        {/* <div className="text-center mt-6">
           <Link to="/" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors">
             ← Back to Home
           </Link>
-        </div>
+        </div> */}
       </div>
     </div>
   );

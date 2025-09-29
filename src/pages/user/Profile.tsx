@@ -8,15 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState,useRef } from 'react';
+import { useState, useRef } from 'react';
 import React, { useEffect } from "react";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Camera, 
-  Shield, 
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Camera,
+  Shield,
   Edit,
   Save,
   Upload,
@@ -53,50 +53,50 @@ const Profile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [errors, setErrors] = useState<{ [key: string]: string }>({}); 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-   const fetchUserProfile = async () => {
+  const fetchUserProfile = async () => {
     try {
       if (!user?.id || !user?.token) return;
       const res = await axios.get(`${baseURL}/api/user/getUser/${user.id}`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      setFormData(res.data.user);            
+      setFormData(res.data.user);
     } catch (error) {
       toast.error("Failed to load profile data.");
     }
   };
 
   useEffect(() => {
-    if (user?.id) {      
+    if (user?.id) {
       fetchUserProfile();
-    }    
+    }
   }, [user]);
 
   // Handle image change
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-     if (!isEditing) return;
+    if (!isEditing) return;
     if (e.target.files && e.target.files[0]) {
       setProfileImage(e.target.files[0]);
     }
   };
 
   const validateField = (name: string, value: string) => {
-      let message = "";
-      if (name === "fullName" && !value.trim()) {
-        message = "Full Name is required.";
-      }
-      if (name === "email" && value) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) message = "Invalid email format.";
-      }
-      if (name === "phone" && value) {
-        if (!/^\d{10}$/.test(value)) message = "Phone must be 10 digits.";
-      }
-      return message;
-    };
-  
+    let message = "";
+    if (name === "fullName" && !value.trim()) {
+      message = "Full Name is required.";
+    }
+    if (name === "email" && value) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) message = "Invalid email format.";
+    }
+    if (name === "phone" && value) {
+      if (!/^\d{10}$/.test(value)) message = "Phone must be 10 digits.";
+    }
+    return message;
+  };
+
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
     // validate immediately
@@ -104,10 +104,10 @@ const Profile = () => {
     setErrors((prev) => ({ ...prev, [field]: errorMessage }));
   };
 
-  const handleSave =async () => {
-   try {
+  const handleSave = async () => {
+    try {
 
-     let newErrors: { [key: string]: string } = {};
+      let newErrors: { [key: string]: string } = {};
       Object.keys(formData).forEach((key) => {
         const msg = validateField(key, (formData as any)[key]);
         if (msg) newErrors[key] = msg;
@@ -122,26 +122,26 @@ const Profile = () => {
       Object.keys(formData).forEach((key) => {
         const value = (formData as any)[key];
         if (value !== null && value !== undefined && String(value).trim() !== "") {
-            data.append(key, value);
+          data.append(key, value);
         }
-        });
+      });
       if (profileImage) {
         data.append("profileImage", profileImage);
       }
 
-      await axios.put(`${baseURL}/api/user/update-profile/${user.id}`,data,
+      await axios.put(`${baseURL}/api/user/update-profile/${user.id}`, data,
         {
           headers: {
             Authorization: `Bearer ${user.token}`,
             "Content-Type": "multipart/form-data",
           },
         }
-        
+
       );
-       toast.success("Profile updated successfully!");
+      toast.success("Profile updated successfully!");
       setIsEditing(false);
       fetchUserProfile(); // refresh with latest
-    }  catch (error: any) {
+    } catch (error: any) {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       } else {
@@ -149,7 +149,7 @@ const Profile = () => {
       }
     }
   };
- 
+
 
   const getUserTypeInfo = () => {
     if (user?.userType === 'student') {
@@ -175,57 +175,57 @@ const Profile = () => {
 
   const userTypeInfo = getUserTypeInfo();
 
-  const handleDeleteAccount=async()=>{
-    if(!user.id || !user.token){
-      toast.error("User not authenticated");
-      return;
-    }
-    if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      return;
-    }
+  // const handleDeleteAccount = async () => {
+  //   if (!user.id || !user.token) {
+  //     toast.error("User not authenticated");
+  //     return;
+  //   }
+  //   if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+  //     return;
+  //   }
 
-    try {
-    await axios.delete(`${baseURL}/api/user/delete-account/${user.id}`, {
-      headers: { Authorization: `Bearer ${user.token}` },
-    });
+  //   try {
+  //     await axios.delete(`${baseURL}/api/user/delete-account/${user.id}`, {
+  //       headers: { Authorization: `Bearer ${user.token}` },
+  //     });
 
-    toast.success("Account deleted successfully!");
-    logout(); 
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || "Failed to delete account.");
-  }
+  //     toast.success("Account deleted successfully!");
+  //     logout();
+  //   } catch (error: any) {
+  //     toast.error(error.response?.data?.message || "Failed to delete account.");
+  //   }
 
-  }
+  // }
 
-  const handleChangePassword=async(e?: React.FormEvent)=>{
-      e?.preventDefault();
+  const handleChangePassword = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!oldPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
       toast.error("All fields are required");
-        return;
+      return;
     }
     if (newPassword !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
- 
-    try{
-      await axios.post(`${baseURL}/api/common/change-password`,
-      { oldPassword, newPassword,confirmPassword },
-      { headers: { Authorization: `Bearer ${user.token}` } }
-    );
-    toast.success("Password changed successfully!");
-    setShowPasswordForm(false);
-    setOldPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
 
-  } catch(error:any){
+    try {
+      await axios.post(`${baseURL}/api/common/change-password`,
+        { oldPassword, newPassword, confirmPassword },
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      toast.success("Password changed successfully!");
+      setShowPasswordForm(false);
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+
+    } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to change password.");
     }
   };
-  
-    return (
-      <UserLayout>
+
+  return (
+    <UserLayout>
       <div className="p-6 max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -274,11 +274,11 @@ const Profile = () => {
                     <p className="text-sm text-muted-foreground">{userTypeInfo.description}</p>
                   </div>
                   <Button variant="outline" size="sm" className={`ml-auto ${!isEditing ? "opacity-60 cursor-not-allowed" : ""}`}
-                   onClick={() =>{if (isEditing) fileInputRef.current?.click()}}disabled={!isEditing}>
+                    onClick={() => { if (isEditing) fileInputRef.current?.click() }} disabled={!isEditing}>
                     <Camera className="h-4 w-4 mr-2" />
                     Change Photo
                   </Button>
-                    <input
+                  <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
@@ -332,12 +332,12 @@ const Profile = () => {
                 <div>
                   <label className="block text-sm font-medium mb-2">Bio</label>
                   <Textarea
-                    value={formData.bio}
+                    value={formData.bio ?? " "}
                     onChange={(e) => handleChange("bio", e.target.value)}
                     disabled={!isEditing}
                     rows={3}
                   />
-                    {errors.bio && <p className="text-red-500 text-sm mt-1">{errors.bio}</p>}
+                  {errors.bio && <p className="text-red-500 text-sm mt-1">{errors.bio}</p>}
                 </div>
 
                 <div>
@@ -353,7 +353,7 @@ const Profile = () => {
                 <div>
                   <label className="block text-sm font-medium mb-2">Living Preferences</label>
                   <Textarea
-                    value={formData.livingPreferences}
+                    value={formData.livingPreferences ?? ""}
                     onChange={(e) => handleChange("livingPreferences", e.target.value)}
                     disabled={!isEditing}
                     rows={2}
@@ -478,12 +478,12 @@ const Profile = () => {
                   <FileText className="h-4 w-4 mr-2" />
                   Download Data
                 </Button>
-                <Button variant="destructive" className="w-full justify-start" onClick={handleDeleteAccount}>
+                {/* <Button variant="destructive" className="w-full justify-start" onClick={handleDeleteAccount}>
                   <User className="h-4 w-4 mr-2" />
                   Delete Account
-                </Button>
+                </Button> */}
 
-              {/* Change Password Form */}
+                {/* Change Password Form */}
                 {showPasswordForm && (
                   <Card className="border mt-4 p-4">
                     <h3 className="text-lg font-semibold mb-4">Change Password</h3>
@@ -521,11 +521,11 @@ const Profile = () => {
           </div>
         </div>
       </div>
-       <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={3000} />
     </UserLayout>
   );
 
-  
+
 };
 
 export default Profile;

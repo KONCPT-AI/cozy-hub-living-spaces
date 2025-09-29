@@ -94,6 +94,7 @@ export interface NormalUser extends BaseUser{
 
 export interface AdminUser extends BaseUser {
   role: 'admin';
+  userType: string;
 }
 
 export type User = NormalUser | AdminUser;
