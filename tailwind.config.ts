@@ -22,7 +22,8 @@ export default {
 				'cabinet': ['Cabinet Grotesk', 'system-ui', 'sans-serif'],
 				'source-serif': ['Source Serif Pro', 'Georgia', 'serif'],
 				'heading': ['Cabinet Grotesk', 'system-ui', 'sans-serif'],
-				'body': ['Source Serif Pro', 'Georgia', 'serif'],
+				'body': ['Cabinet Grotesk', 'system-ui', 'sans-serif'],
+				// 'body': ['Source Serif Pro', 'Georgia', 'serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

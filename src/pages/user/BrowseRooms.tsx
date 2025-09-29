@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -15,41 +15,38 @@ import {
   Filter,
   MapPin, 
   Users, 
-  Wifi, 
-  Car, 
-  Coffee, 
-  Star,
   Heart,
   Eye,
   Calendar,
-  DollarSign,
-  X,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import axios from 'axios';
+
+interface Property {
+  id: string;
+  name: string;
+  address?: string;
+  amenities?: string[];
+  images?: string[];
+}
 
 interface Room {
   id: string;
-  room_number: string;
-  room_type: string;
-  price_per_month: number;
-  deposit_amount: number;
+  roomNumber: number;
+  roomType: string;
+  monthlyRent: number;
+  depositAmount: number;
   capacity: number;
-  current_occupancy: number;
-  floor_number?: number;
+  occupancy: number;
+  floorNumber?: number;
   is_available: boolean;
+  status:string;
   description?: string;
   amenities?: string[];
   images?: string[];
-  preferred_user_type?: string;
-  property_id?: string;
-  properties?: {
-    id: string;
-    name: string;
-    address?: string;
-    amenities?: string[];
-    images?: string[];
-  };
+  preferredUserType?: string;
+  property?: Property;
 }
 
 const BrowseRooms = () => {
@@ -63,57 +60,38 @@ const BrowseRooms = () => {
   const [showRoomDetails, setShowRoomDetails] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [cardImageIndex, setCardImageIndex] = useState<Record<string, number>>({});
   const [checkInDate, setCheckInDate] = useState('');
-  const [checkOutDate, setCheckOutDate] = useState('');
+  const [duration, setDuration] = useState('');
   const [bookingNotes, setBookingNotes] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const baseURL = import.meta.env.VITE_API_BASE_URL;
+  const token = user?.token;
 
   useEffect(() => {
     fetchRooms();
   }, []);
 
   const fetchRooms = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('rooms')
-        .select(`
-          *,
-          properties (
-            id,
-            name,
-            address,
-            amenities,
-            images
-          )
-        `)
-        .eq('is_available', true)
-        .order('created_at', { ascending: false });
+  try {
+    setLoading(true);
+    const res = await axios.get(`${baseURL}/api/rooms/getall?available=true`);
+    setRooms(res.data.rooms);
+    
+  } catch (error) {
+    console.error('Error fetching rooms:', error);
+    toast({
+      title: "Error",
+      description: "Failed to load rooms. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-      if (error) {
-        console.error('Error fetching rooms:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load rooms. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setRooms(data || []);
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load rooms. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const typeFilters = [
     { label: 'All Types', value: 'all' },
@@ -156,7 +134,6 @@ const BrowseRooms = () => {
     setSelectedRoom(room);
     setShowBookingModal(true);
     setCheckInDate('');
-    setCheckOutDate('');
     setBookingNotes('');
   };
 
@@ -172,29 +149,20 @@ const BrowseRooms = () => {
 
     setIsBooking(true);
     try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert({
-          user_id: user.id,
-          room_id: selectedRoom.id,
-          check_in_date: checkInDate,
-          check_out_date: checkOutDate,
-          monthly_rent: selectedRoom.price_per_month,
-          status: 'pending',
-          notes: bookingNotes || null
-        })
-        .select()
-        .single();
+      const bookingData = {
+      userId: Number(user.id),
+      roomId: Number(selectedRoom.id),
+      checkInDate: checkInDate,
+      monthlyRent: selectedRoom.monthlyRent,
+      duration: duration ? Number(duration) : null,
+      depositAmount: selectedRoom.depositAmount,
+      status: 'pending',
+      notes: bookingNotes || null,
+    };
 
-      if (error) {
-        console.error('Error creating booking:', error);
-        toast({
-          title: "Booking Failed",
-          description: "Failed to create booking. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
+      const res = await axios.post(`${baseURL}/api/book-room/add`, bookingData,
+          { headers: { Authorization: `Bearer ${token}` } })
+
 
       toast({
         title: "Booking Submitted",
@@ -203,45 +171,65 @@ const BrowseRooms = () => {
 
       setShowBookingModal(false);
       setSelectedRoom(null);
-    } catch (error) {
-      console.error('Error creating booking:', error);
+      setCheckInDate('');
+      setBookingNotes('');
+    } catch (error:any) {
+      const errorMessage = error?.response?.data?.message
       toast({
         title: "Booking Failed",
-        description: "An unexpected error occurred. Please try again.",
+        description: errorMessage || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsBooking(false);
-    }
+    } 
   };
 
-  const nextImage = () => {
-    if (selectedRoom?.images && selectedRoom.images.length > 0) {
-      setCurrentImageIndex((prev) => 
-        prev === selectedRoom.images!.length - 1 ? 0 : prev + 1
-      );
-    }
+  // const nextImage = () => {
+  //   if (selectedRoom?.images && selectedRoom.images.length > 0) {
+  //     setCurrentImageIndex((prev) => 
+  //       prev === selectedRoom.images!.length - 1 ? 0 : prev + 1
+  //     );
+  //   }
+  // };
+
+  // const prevImage = () => {
+  //   if (selectedRoom?.images && selectedRoom.images.length > 0) {
+  //     setCurrentImageIndex((prev) => 
+  //       prev === 0 ? selectedRoom.images!.length - 1 : prev - 1
+  //     );
+  //   }
+  // };
+
+  const nextCardImage = (roomId: string, totalImages: number) => {
+  setCardImageIndex(prev => ({
+    ...prev,
+    [roomId]: prev[roomId] === undefined
+      ? 1
+      : (prev[roomId] + 1) % totalImages
+  }));
   };
 
-  const prevImage = () => {
-    if (selectedRoom?.images && selectedRoom.images.length > 0) {
-      setCurrentImageIndex((prev) => 
-        prev === 0 ? selectedRoom.images!.length - 1 : prev - 1
-      );
-    }
+  const prevCardImage = (roomId: string, totalImages: number) => {
+    setCardImageIndex(prev => ({
+      ...prev,
+      [roomId]: prev[roomId] === undefined
+        ? totalImages - 1
+        : (prev[roomId] - 1 + totalImages) % totalImages
+    }));
   };
 
   const filteredRooms = rooms.filter(room => {
-    const matchesSearch = room.room_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = room.roomNumber.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (room.description && room.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (room.properties?.name && room.properties.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (room.properties?.address && room.properties.address.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesType = selectedType === 'all' || room.room_type === selectedType;
+                         (room.property.name && room.property.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (room.property.address && room.property.address.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesType = selectedType === 'all' || room.roomType === selectedType;
     const matchesPrice = priceRange === 'all' || 
-      (priceRange === 'under-700' && room.price_per_month < 700) ||
-      (priceRange === '700-900' && room.price_per_month >= 700 && room.price_per_month <= 900) ||
-      (priceRange === '900-1200' && room.price_per_month > 900 && room.price_per_month <= 1200) ||
-      (priceRange === 'above-1200' && room.price_per_month > 1200);
+      (priceRange === 'under-700' && room.monthlyRent < 700) ||
+      (priceRange === '700-900' && room.monthlyRent >= 700 && room.monthlyRent <= 900) ||
+      (priceRange === '900-1200' && room.monthlyRent > 900 && room.monthlyRent <= 1200) ||
+      (priceRange === 'above-1200' && room.monthlyRent > 1200);
     
     return matchesSearch && matchesType && matchesPrice;
   });
@@ -272,7 +260,9 @@ const BrowseRooms = () => {
             </div>
 
             {/* Type Filter */}
+            
             <select
+              aria-label='Room Type'
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -286,6 +276,7 @@ const BrowseRooms = () => {
 
             {/* Price Filter */}
             <select
+              aria-label='Price Range'
               value={priceRange}
               onChange={(e) => setPriceRange(e.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -336,15 +327,42 @@ const BrowseRooms = () => {
         {!loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRooms.map((room) => (
+              
               <Card key={room.id} className="overflow-hidden border-0 shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1">
                 <div className="relative">
-                  <img 
-                    src={room.images && room.images.length > 0 
-                      ? room.images[0] 
-                      : `https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&h=250&fit=crop`}
-                    alt={`Room ${room.room_number}`}
-                    className="w-full h-48 object-cover"
+                  <img src={
+                      room.images && room.images.length > 0
+                        ? `${baseURL}${room.images[cardImageIndex[room.id] || 0]}`
+                        : `https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&h=250&fit=crop`
+                    }
+                    alt={`Room ${room.roomNumber}`}
+                    className="w-full h-full object-cover rounded-t-lg"
                   />
+
+                    {room.images && room.images.length > 1 && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-background/80"
+                          onClick={() => prevCardImage(room.id, room.images!.length)}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-background/80"
+                          onClick={() => nextCardImage(room.id, room.images!.length)}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+
+                        <div className="absolute bottom-2 right-2 bg-background/80 px-2 py-1 rounded text-xs">
+                          {cardImageIndex[room.id] !== undefined ? cardImageIndex[room.id] + 1 : 1} / {room.images.length}
+                        </div>
+                      </>
+                    )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -356,11 +374,11 @@ const BrowseRooms = () => {
                     <Heart className={`h-4 w-4 ${favorites.includes(room.id) ? 'fill-current' : ''}`} />
                   </Button>
                   <Badge className="absolute top-2 left-2 bg-secondary text-secondary-foreground">
-                    {room.is_available ? 'Available' : 'Occupied'}
+                    {room.status === "available" ? 'Available' : 'Occupied'}
                   </Badge>
-                  {room.preferred_user_type && (
+                  {room.preferredUserType && (
                     <Badge className="absolute bottom-2 right-2 bg-background/90 text-foreground">
-                      {room.preferred_user_type}
+                      {room.preferredUserType}
                     </Badge>
                   )}
                 </div>
@@ -368,36 +386,38 @@ const BrowseRooms = () => {
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h3 className="font-semibold text-lg line-clamp-1">Room {room.room_number}</h3>
-                      {room.properties && (
+                      <h3 className="font-semibold text-lg line-clamp-1">Room {room.roomNumber}</h3>
+                      {room.property && (
                         <div className="flex items-center text-muted-foreground text-sm mt-1">
                           <MapPin className="h-3 w-3 mr-1" />
-                          <span className="line-clamp-1">{room.properties.name}</span>
+                          <span className="line-clamp-1">{room.property.name}</span>
                         </div>
                       )}
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      {room.room_type}
+                      {room.roomType}
                     </Badge>
                   </div>
                   
                   <div className="flex items-center text-muted-foreground mb-2">
                     <Users className="h-4 w-4 mr-1" />
                     <span className="text-sm">
-                      {room.current_occupancy}/{room.capacity} occupied
-                      {room.floor_number && ` • Floor ${room.floor_number}`}
+                      {room.occupancy} occupied
+                      {room.floorNumber && ` • Floor ${room.floorNumber}`}
                     </span>
                   </div>
                   
-                  {room.description && (
+                  {room.description &&  room.description.length>0?(
                     <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                      {room.description}
+                      {room.description || 'NA'}
                     </p>
+                  ):(
+                    <p className="text-gray-400 text-xs mb-4">No description</p>
                   )}
                   
-                  {room.amenities && room.amenities.length > 0 && (
+                  {Array.isArray(room.amenities) && room.amenities.length > 0 ? (
                     <div className="flex flex-wrap gap-1 mb-4">
-                      {room.amenities.slice(0, 3).map((amenity, index) => (
+                      {room.amenities.slice(0, 3).map((amenity: string, index: number) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {amenity}
                         </Badge>
@@ -408,14 +428,16 @@ const BrowseRooms = () => {
                         </Badge>
                       )}
                     </div>
+                    ) : (
+                    <p className="text-gray-400 text-xs mb-4">No amenities</p>
                   )}
                   
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-2xl font-bold text-secondary">${room.price_per_month}</span>
+                      <span className="text-2xl font-bold text-secondary">₹{room.monthlyRent}</span>
                       <span className="text-sm text-muted-foreground">/month</span>
                       <div className="text-sm text-muted-foreground">
-                        Deposit: ${room.deposit_amount}
+                        Deposit: ₹{room.depositAmount}
                       </div>
                     </div>
                     <div className="flex space-x-2">
@@ -430,7 +452,7 @@ const BrowseRooms = () => {
                       <Button 
                         size="sm"
                         onClick={() => handleBookRoom(room)}
-                        disabled={!room.is_available || room.current_occupancy >= room.capacity}
+                        disabled={room.status !== "available" || room.occupancy >= room.capacity}
                       >
                         <Calendar className="h-4 w-4 mr-1" />
                         Book
@@ -477,9 +499,9 @@ const BrowseRooms = () => {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
-                <span>Room {selectedRoom?.room_number} Details</span>
+                <span>Room {selectedRoom?.roomNumber} Details</span>
                 <Badge variant="outline">
-                  {selectedRoom?.room_type}
+                  {selectedRoom?.roomType}
                 </Badge>
               </DialogTitle>
             </DialogHeader>
@@ -491,9 +513,9 @@ const BrowseRooms = () => {
                   <div className="w-full h-80 rounded-lg overflow-hidden">
                     <img 
                       src={selectedRoom.images && selectedRoom.images.length > 0 
-                        ? selectedRoom.images[currentImageIndex] 
+                        ? `${baseURL}${selectedRoom.images[cardImageIndex[selectedRoom.id] || 0]}`
                         : `https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=400&fit=crop`}
-                      alt={`Room ${selectedRoom.room_number}`}
+                      alt={`Room ${selectedRoom.roomNumber}`}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -504,7 +526,7 @@ const BrowseRooms = () => {
                         variant="ghost"
                         size="sm"
                         className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-background/80"
-                        onClick={prevImage}
+                         onClick={() => prevCardImage(selectedRoom?.id!, selectedRoom!.images!.length)}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -512,7 +534,7 @@ const BrowseRooms = () => {
                         variant="ghost"
                         size="sm"
                         className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-background/80"
-                        onClick={nextImage}
+                         onClick={() => nextCardImage(selectedRoom?.id!, selectedRoom!.images!.length)}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -528,27 +550,27 @@ const BrowseRooms = () => {
                   <div>
                     <h3 className="text-xl font-semibold mb-4">Room Information</h3>
                     <div className="space-y-3">
-                      {selectedRoom.properties && (
+                      {selectedRoom.property && (
                         <>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Property:</span>
-                            <span className="font-medium">{selectedRoom.properties.name}</span>
+                            <span className="font-medium">{selectedRoom.property.name}</span>
                           </div>
-                          {selectedRoom.properties.address && (
+                          {selectedRoom.property.address && (
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Address:</span>
-                              <span className="font-medium text-sm">{selectedRoom.properties.address}</span>
+                              <span className="font-medium text-sm">{selectedRoom.property.address}</span>
                             </div>
                           )}
                         </>
                       )}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Room Number:</span>
-                        <span className="font-medium">{selectedRoom.room_number}</span>
+                        <span className="font-medium">{selectedRoom.roomNumber}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Room Type:</span>
-                        <Badge variant="outline">{selectedRoom.room_type}</Badge>
+                        <Badge variant="outline">{selectedRoom.roomType}</Badge>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Capacity:</span>
@@ -556,12 +578,12 @@ const BrowseRooms = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Current Occupancy:</span>
-                        <span className="font-medium">{selectedRoom.current_occupancy}/{selectedRoom.capacity}</span>
+                        <span className="font-medium">{selectedRoom.occupancy}</span>
                       </div>
-                      {selectedRoom.floor_number && (
+                      {selectedRoom.floorNumber && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Floor:</span>
-                          <span className="font-medium">{selectedRoom.floor_number}</span>
+                          <span className="font-medium">{selectedRoom.floorNumber}</span>
                         </div>
                       )}
                       <div className="flex justify-between">
@@ -570,10 +592,10 @@ const BrowseRooms = () => {
                           {selectedRoom.is_available ? 'Available' : 'Occupied'}
                         </Badge>
                       </div>
-                      {selectedRoom.preferred_user_type && (
+                      {selectedRoom.preferredUserType && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Preferred For:</span>
-                          <Badge variant="outline">{selectedRoom.preferred_user_type}</Badge>
+                          <Badge variant="outline">{selectedRoom.preferredUserType}</Badge>
                         </div>
                       )}
                     </div>
@@ -584,38 +606,41 @@ const BrowseRooms = () => {
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Monthly Rent:</span>
-                        <span className="text-2xl font-bold text-secondary">${selectedRoom.price_per_month}</span>
+                        <span className="text-2xl font-bold text-secondary">₹{selectedRoom.monthlyRent}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Security Deposit:</span>
-                        <span className="font-medium">${selectedRoom.deposit_amount}</span>
+                        <span className="font-medium">₹{selectedRoom.depositAmount}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Description */}
-                {selectedRoom.description && (
                   <div>
                     <h3 className="text-xl font-semibold mb-3">Description</h3>
                     <p className="text-muted-foreground leading-relaxed">
-                      {selectedRoom.description}
+                      {selectedRoom.description || 'No description available.'}
                     </p>
                   </div>
-                )}
+                
 
                 {/* Amenities */}
-                {selectedRoom.amenities && selectedRoom.amenities.length > 0 && (
-                  <div>
-                    <h3 className="text-xl font-semibold mb-3">Amenities</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedRoom.amenities.map((amenity, index) => (
-                        <Badge key={index} variant="outline" className="text-sm">
+                 {Array.isArray(selectedRoom.amenities) && selectedRoom.amenities.length > 0 && (
+                      <><h3 className="text-xl font-semibold mb-3">Amenities</h3>
+                      <div className="flex flex-wrap gap-1 mb-4">
+                      {selectedRoom.amenities.slice(0, 3).map((amenity, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
                           {amenity}
                         </Badge>
                       ))}
-                    </div>
-                  </div>
+                      {selectedRoom.amenities.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{selectedRoom.amenities.length - 3} more
+                        </Badge>
+                      )}
+                  
+                  </div></>
                 )}
 
                 {/* Action Buttons */}
@@ -628,7 +653,7 @@ const BrowseRooms = () => {
                       setShowRoomDetails(false);
                       handleBookRoom(selectedRoom);
                     }}
-                    disabled={!selectedRoom.is_available || selectedRoom.current_occupancy >= selectedRoom.capacity}
+                    disabled={!selectedRoom.is_available || selectedRoom.occupancy >= selectedRoom.capacity}
                   >
                     <Calendar className="h-4 w-4 mr-2" />
                     Book This Room
@@ -643,24 +668,32 @@ const BrowseRooms = () => {
         <Dialog open={showBookingModal} onOpenChange={setShowBookingModal}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Book Room {selectedRoom?.room_number}</DialogTitle>
+              <DialogTitle>Book Room {selectedRoom?.roomNumber}</DialogTitle>
             </DialogHeader>
             
             <div className="space-y-4">
               {selectedRoom && (
                 <div className="bg-muted p-4 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium">Room {selectedRoom.room_number}</span>
-                    <Badge variant="outline">{selectedRoom.room_type}</Badge>
+                    <span className="font-medium">Room {selectedRoom.roomNumber}</span>
+                    <Badge variant="outline">{selectedRoom.roomType}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Monthly Rent:</span>
-                    <span className="text-lg font-bold text-secondary">${selectedRoom.price_per_month}</span>
+                    <span className="text-lg font-bold text-secondary">₹{selectedRoom.monthlyRent}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Security Deposit:</span>
-                    <span className="font-medium">${selectedRoom.deposit_amount}</span>
+                    <span className="font-medium">₹{selectedRoom.depositAmount}</span>
                   </div>
+                  <div className="flex justify-between font-semibold">
+                    <span>Total Payable:</span>
+                    <span className="text-secondary">
+                        {checkInDate && duration
+                           ? `₹${selectedRoom.monthlyRent * Number(duration) + selectedRoom.depositAmount}`
+                          : 0}
+                    </span>
+                </div>
                 </div>
               )}
 
@@ -677,18 +710,19 @@ const BrowseRooms = () => {
                   />
                 </div>
 
+                {/* Duration Dropdown */}
                 <div>
-                  <Label htmlFor="check-out-date">Check-out Date</Label>
-                  <Input
-                    id="check-out-date"
-                    type="date"
-                    value={checkOutDate}
-                    onChange={(e) => setCheckOutDate(e.target.value)}
-                    min={checkInDate || new Date().toISOString().split('T')[0]}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Leave empty for open-ended booking
-                  </p>
+                  <Label htmlFor="duration">Duration *</Label>
+                  <Select value={duration} onValueChange={(value) => setDuration(value)}>
+                    <SelectTrigger className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <SelectValue placeholder="Select Duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">3 Months</SelectItem>
+                      <SelectItem value="6">6 Months</SelectItem>
+                      <SelectItem value="12">12 Months</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -727,3 +761,5 @@ const BrowseRooms = () => {
 };
 
 export default BrowseRooms;
+
+

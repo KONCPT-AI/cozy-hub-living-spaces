@@ -15,6 +15,7 @@ import {
   X,
   Clock
 } from 'lucide-react';
+import logo from '@public/logo.png';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -77,8 +78,8 @@ const UserLayout = ({ children }: UserLayoutProps) => {
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
               <Home className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              CoLiving
+            <span className="text-xl font-bold px-3 bg-gradient-primary rounded-lg">
+              <img src="/logo.png" alt="Logo" className="w-24 h-10 object-contain" />
             </span>
           </Link>
           <Button
@@ -95,10 +96,10 @@ const UserLayout = ({ children }: UserLayoutProps) => {
         <div className="p-6 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className={`w-10 h-10 ${getUserTypeColor()} rounded-full flex items-center justify-center text-white font-semibold`}>
-              {user?.name?.charAt(0) || 'U'}
+              {user?.fullName?.charAt(0) || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
+              <p className="text-sm font-medium truncate">{user?.fullName || 'User'}</p>
               <p className="text-xs text-muted-foreground capitalize">{user?.userType || 'User'}</p>
             </div>
           </div>
@@ -149,9 +150,9 @@ const UserLayout = ({ children }: UserLayoutProps) => {
           </Button>
           <div className="flex items-center space-x-2">
             <div className={`w-8 h-8 ${getUserTypeColor()} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
-              {user?.name?.charAt(0) || 'U'}
+              {user?.fullName?.charAt(0) || 'U'}
             </div>
-            <span className="text-sm font-medium">{user?.name || 'User'}</span>
+            <span className="text-sm font-medium">{user?.fullName || 'User'}</span>
           </div>
         </div>
 

@@ -7,15 +7,17 @@ import {
   Building, 
   Calendar, 
   CreditCard, 
-  Ticket, 
-  TrendingUp,
   AlertTriangle,
   CheckCircle 
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/AdminLayout';
+import axios from "axios";
+import { useAuth } from '@/contexts/AuthContext';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
+    const token = user?.token;
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalRooms: 0,
@@ -23,7 +25,7 @@ const AdminDashboard = () => {
     availableRooms: 0,
     pendingBookings: 0,
     activeBookings: 0,
-    totalRevenue: 0,
+    // totalRevenue: 0,
     pendingTickets: 0,
     resolvedTickets: 0,
   });
@@ -39,24 +41,24 @@ const AdminDashboard = () => {
     try {
       // Fetch various statistics
       const [
-        usersResult,
-        roomsResult,
-        bookingsResult,
-        paymentsResult,
-        ticketsResult
+        usersRes,
+        roomsRes,
+        bookingsRes,
+        // paymentsRes,
+        ticketsRes,
       ] = await Promise.all([
-        supabase.from('profiles').select('*'),
-        supabase.from('rooms').select('*'),
-        supabase.from('bookings').select('*'),
-        supabase.from('payments').select('*'),
-        supabase.from('maintenance_tickets').select('*')
+        axios.get(`${API_BASE_URL}/api/user-by-admin/getAllUsers`,{headers: { Authorization: `Bearer ${token}` }}),
+        axios.get(`${API_BASE_URL}/api/rooms/getall`),
+        axios.get(`${API_BASE_URL}/api/book-room/getUserBookings`,{headers: { Authorization: `Bearer ${token}` }}),
+        // axios.get(`${API_BASE_URL}/api/payments`),
+        axios.get(`${API_BASE_URL}/api/tickets/get-all-tickets`,{headers: { Authorization: `Bearer ${token}` }}),
       ]);
 
-      const users = usersResult.data || [];
-      const rooms = roomsResult.data || [];
-      const bookings = bookingsResult.data || [];
-      const payments = paymentsResult.data || [];
-      const tickets = ticketsResult.data || [];
+      const users = usersRes.data || [];      
+      const rooms = roomsRes.data.data || roomsRes.data || [];
+      const bookings = bookingsRes.data || [];
+      // const payments = paymentsRes.data || [];
+      const tickets = ticketsRes.data || [];
 
       setStats({
         totalUsers: users.length,
@@ -65,7 +67,7 @@ const AdminDashboard = () => {
         availableRooms: rooms.filter(r => r.is_available).length,
         pendingBookings: bookings.filter(b => b.status === 'pending').length,
         activeBookings: bookings.filter(b => b.status === 'active').length,
-        totalRevenue: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
+        // totalRevenue: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
         pendingTickets: tickets.filter(t => t.status === 'open').length,
         resolvedTickets: tickets.filter(t => t.status === 'resolved').length,
       });
@@ -130,10 +132,10 @@ const AdminDashboard = () => {
               <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            {/* <CardContent>
               <div className="text-2xl font-bold">₹{stats.totalRevenue.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Total collected</p>
-            </CardContent>
+            </CardContent> */}
           </Card>
         </div>
 

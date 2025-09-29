@@ -2,12 +2,15 @@
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import ProtectedUserRoute from "./components/ProtectedUserRoute";
+
 
 // Public Website Pages
 import Index from "./pages/Index";
@@ -34,6 +37,7 @@ import AccessHistory from "./pages/user/AccessHistory";
 // Admin Dashboard Pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
+import UserDetails from "./pages/admin/UserDetails"
 import PropertyManagement from "./pages/admin/PropertyManagement";
 import RoomManagement from "./pages/admin/RoomManagement";
 import BookingManagement from "./pages/admin/BookingManagement";
@@ -52,6 +56,17 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <ToastContainer 
+        position="top-right" 
+        autoClose={3000} 
+        hideProgressBar={false} 
+        newestOnTop={false} 
+        closeOnClick 
+        rtl={false} 
+        pauseOnFocusLoss 
+        draggable 
+        pauseOnHover 
+      />
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -97,7 +112,7 @@ const App = () => (
               <ProtectedUserRoute>
                 <Support />
               </ProtectedUserRoute>
-            } />
+            } /> 
             <Route path="/user/events" element={
               <ProtectedUserRoute>
                 <UserEvents />
@@ -120,12 +135,17 @@ const App = () => (
                 <UserManagement />
               </ProtectedAdminRoute>
             } />
-            <Route path="/admin/properties" element={
+            <Route path="/admin/users/:id" element={
+              <ProtectedAdminRoute>
+                <UserDetails />
+              </ProtectedAdminRoute>
+            } />
+             <Route path="/admin/properties" element={
               <ProtectedAdminRoute>
                 <PropertyManagement />
               </ProtectedAdminRoute>
             } />
-            <Route path="/admin/rooms" element={
+             <Route path="/admin/rooms" element={
               <ProtectedAdminRoute>
                 <RoomManagement />
               </ProtectedAdminRoute>

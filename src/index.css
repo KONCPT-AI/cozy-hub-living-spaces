@@ -118,9 +118,25 @@
 
   body {
     @apply bg-background text-foreground font-body;
+
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+
   }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading;
   }
+}
+
+/* custome utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  
+  scrollbar-width: none;     
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             
 }

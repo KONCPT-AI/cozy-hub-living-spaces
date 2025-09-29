@@ -8,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Wrench, User, Clock, CheckCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/AdminLayout';
+import { useAuth } from "@/contexts/AuthContext";
+import axios from "axios";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
 
 const TicketManagement = () => {
   const [tickets, setTickets] = useState([]);
@@ -23,27 +25,21 @@ const TicketManagement = () => {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+   const { user } = useAuth();  
+    const token = user?.token;   
 
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
-    try {
-      const [ticketsRes, profilesRes, adminRes] = await Promise.all([
-        supabase.from('maintenance_tickets').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*'),
-        supabase.from('admin_users').select('*')
-      ]);
-
-      if (ticketsRes.error) throw ticketsRes.error;
-      if (profilesRes.error) throw profilesRes.error;
-      if (adminRes.error) throw adminRes.error;
-
-      setTickets(ticketsRes.data || []);
-      setProfiles(profilesRes.data || []);
-      setAdminUsers(adminRes.data || []);
-      setLoading(false);
+      try {
+      const response = await axios.get(`${API_BASE_URL}/api/tickets/get-all-tickets`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setTickets(response.data.tickets || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -51,6 +47,7 @@ const TicketManagement = () => {
         description: 'Failed to fetch ticket data',
         variant: 'destructive',
       });
+    }finally{
       setLoading(false);
     }
   };
@@ -59,23 +56,16 @@ const TicketManagement = () => {
     if (!selectedTicket) return;
 
     try {
-      const updateData: any = {};
-      if (assignTo && assignTo !== "unassigned") updateData.assigned_to = assignTo;
-      if (assignTo === "unassigned") updateData.assigned_to = null;
-      if (newStatus) updateData.status = newStatus;
-      if (resolutionNotes) updateData.resolution_notes = resolutionNotes;
-      if (newStatus === 'resolved') updateData.resolved_at = new Date().toISOString();
-
-      const { error } = await supabase
-        .from('maintenance_tickets')
-        .update(updateData)
-        .eq('id', selectedTicket.id);
-
-      if (error) throw error;
+      const payload={
+        status: newStatus,
+        assignTo:assignTo==='unassigned'?null:assignTo,
+      };
+      const response=await axios.put(`${API_BASE_URL}/api/tickets/update-ticket-status/${selectedTicket.id}`,payload,
+        {headers:{Authorization:`Bearer ${token}`}})
       
       toast({ 
         title: 'Success', 
-        description: 'Ticket updated successfully' 
+        description: response.data.message || 'Ticket updated successfully',
       });
       fetchData();
       setIsDialogOpen(false);
@@ -92,10 +82,6 @@ const TicketManagement = () => {
     }
   };
 
-  const getUserName = (userId) => {
-    const profile = profiles.find(p => p.user_id === userId);
-    return profile?.full_name || profile?.email || 'Unknown User';
-  };
 
   const getAdminName = (adminId) => {
     const admin = adminUsers.find(a => a.user_id === adminId);
@@ -188,8 +174,8 @@ const TicketManagement = () => {
               <TableBody>
                 {tickets.map((ticket) => (
                   <TableRow key={ticket.id}>
-                    <TableCell className="font-medium">{ticket.title}</TableCell>
-                    <TableCell>{getUserName(ticket.user_id)}</TableCell>
+                    <TableCell className="font-medium">{ticket.issue}</TableCell>
+                    <TableCell>{ticket.userId}</TableCell>
                     <TableCell>
                       <Badge variant={getPriorityColor(ticket.priority)}>
                         {ticket.priority}
@@ -201,7 +187,7 @@ const TicketManagement = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>{ticket.assigned_to ? getAdminName(ticket.assigned_to) : 'Unassigned'}</TableCell>
-                    <TableCell>{new Date(ticket.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(ticket.createdAt).toLocaleDateString('In')}</TableCell>
                     <TableCell>
                       <Dialog open={isDialogOpen && selectedTicket?.id === ticket.id} onOpenChange={(open) => {
                         setIsDialogOpen(open);
@@ -234,7 +220,7 @@ const TicketManagement = () => {
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <Label>User</Label>
-                                <div className="text-sm text-muted-foreground">{getUserName(ticket.user_id)}</div>
+                                <div className="text-sm text-muted-foreground">{ticket.userId}</div>
                               </div>
                               <div>
                                 <Label>Priority</Label>
@@ -254,8 +240,8 @@ const TicketManagement = () => {
                                 <SelectContent>
                                   <SelectItem value="unassigned">Unassigned</SelectItem>
                                   {adminUsers.map((admin) => (
-                                    <SelectItem key={admin.user_id} value={admin.user_id}>
-                                      {admin.full_name || admin.email}
+                                    <SelectItem key={admin.userId} value={admin.userId}>
+                                      {admin.fullName || admin.email}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
