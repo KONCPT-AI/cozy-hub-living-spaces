@@ -42,6 +42,8 @@ import TicketManagement from "./pages/admin/TicketManagement";
 import EventManagement from "./pages/admin/EventManagement";
 import Reports from "./pages/admin/Reports";
 import AccessLogManagement from "./pages/admin/AccessLogManagement";
+import RoleManagement from "./pages/admin/RoleManagement";
+import AdminUserManagement from "./pages/admin/AdminUserManagement";
 
 import NotFound from "./pages/NotFound";
 
@@ -158,6 +160,16 @@ const App = () => (
             <Route path="/admin/access-logs" element={
               <ProtectedAdminRoute>
                 <AccessLogManagement />
+              </ProtectedAdminRoute>
+            } />
+            <Route path="/admin/roles" element={
+              <ProtectedAdminRoute>
+                <RoleManagement />
+              </ProtectedAdminRoute>
+            } />
+            <Route path="/admin/admin-users" element={
+              <ProtectedAdminRoute>
+                <AdminUserManagement />
               </ProtectedAdminRoute>
             } />
 
