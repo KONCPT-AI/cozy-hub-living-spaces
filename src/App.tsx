@@ -34,6 +34,7 @@ import AccessHistory from "./pages/user/AccessHistory";
 // Admin Dashboard Pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
+import UserRolesDocumentation from "./pages/admin/UserRolesDocumentation";
 import PropertyManagement from "./pages/admin/PropertyManagement";
 import RoomManagement from "./pages/admin/RoomManagement";
 import BookingManagement from "./pages/admin/BookingManagement";
@@ -118,6 +119,11 @@ const App = () => (
             <Route path="/admin/users" element={
               <ProtectedAdminRoute>
                 <UserManagement />
+              </ProtectedAdminRoute>
+            } />
+            <Route path="/admin/users/roles-documentation" element={
+              <ProtectedAdminRoute>
+                <UserRolesDocumentation />
               </ProtectedAdminRoute>
             } />
             <Route path="/admin/properties" element={
