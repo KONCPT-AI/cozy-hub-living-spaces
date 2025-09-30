@@ -8,14 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Users, Search, Eye, CheckCircle, XCircle, UserPlus, BookOpen } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Users, Search, Eye, CheckCircle, XCircle, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/AdminLayout';
 
 const UserManagement = () => {
-  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -151,15 +149,7 @@ const UserManagement = () => {
             <Users className="h-8 w-8" />
             User Management
           </h1>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/admin/users/roles-documentation')}
-            >
-              <BookOpen className="h-4 w-4 mr-2" />
-              View Roles Documentation
-            </Button>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { resetForm(); }}>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -256,7 +246,6 @@ const UserManagement = () => {
               </form>
             </DialogContent>
           </Dialog>
-          </div>
         </div>
 
         <Card>
