@@ -7,40 +7,13 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
+  // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
   }
   public: {
     Tables: {
-      admin_roles: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          role_name: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          role_name: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          role_name?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       admin_users: {
         Row: {
           created_at: string
@@ -49,7 +22,6 @@ export type Database = {
           id: string
           is_active: boolean | null
           role: Database["public"]["Enums"]["admin_role"]
-          role_id: string | null
           updated_at: string
           user_id: string
         }
@@ -60,7 +32,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           role?: Database["public"]["Enums"]["admin_role"]
-          role_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -71,19 +42,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           role?: Database["public"]["Enums"]["admin_role"]
-          role_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "admin_users_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "admin_roles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       announcements: {
         Row: {
@@ -606,47 +568,6 @@ export type Database = {
         }
         Relationships: []
       }
-      role_permissions: {
-        Row: {
-          can_add: boolean | null
-          can_delete: boolean | null
-          can_edit: boolean | null
-          can_view: boolean | null
-          created_at: string | null
-          id: string
-          role_id: string
-          section: string
-        }
-        Insert: {
-          can_add?: boolean | null
-          can_delete?: boolean | null
-          can_edit?: boolean | null
-          can_view?: boolean | null
-          created_at?: string | null
-          id?: string
-          role_id: string
-          section: string
-        }
-        Update: {
-          can_add?: boolean | null
-          can_delete?: boolean | null
-          can_edit?: boolean | null
-          can_view?: boolean | null
-          created_at?: string | null
-          id?: string
-          role_id?: string
-          section?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_permissions_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "admin_roles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       rooms: {
         Row: {
           amenities: string[] | null
@@ -719,22 +640,18 @@ export type Database = {
     Functions: {
       create_admin_user: {
         Args: {
-          admin_role?: Database["public"]["Enums"]["admin_role"]
           user_email: string
           user_name?: string
+          admin_role?: Database["public"]["Enums"]["admin_role"]
         }
         Returns: string
-      }
-      has_permission: {
-        Args: { _action: string; _section: string }
-        Returns: boolean
       }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
       is_late_entry: {
-        Args: { check_time?: string; property_id_param: string }
+        Args: { property_id_param: string; check_time?: string }
         Returns: boolean
       }
     }

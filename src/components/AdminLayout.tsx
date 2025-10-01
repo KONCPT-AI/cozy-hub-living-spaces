@@ -16,12 +16,10 @@ import {
   LogOut,
   Menu,
   X,
-  UserCheck,
-  UserCog
+  UserCheck
 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { usePermissions } from '@/hooks/usePermissions';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -33,33 +31,18 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { hasPermission, isSuperAdmin, loading } = usePermissions();
 
-  const allNavigationItems = [
-    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, section: null },
-    { name: 'User Management', href: '/admin/users', icon: Users, section: 'users' },
-    { name: 'Property Management', href: '/admin/properties', icon: Building, section: 'properties' },
-    { name: 'Room Management', href: '/admin/rooms', icon: Building, section: 'rooms' },
-    { name: 'Bookings', href: '/admin/bookings', icon: Calendar, section: 'bookings' },
-    { name: 'Payments', href: '/admin/payments', icon: CreditCard, section: 'finance' },
-    { name: 'Support Tickets', href: '/admin/tickets', icon: Ticket, section: 'support_tickets' },
-    { name: 'Access Logs', href: '/admin/access-logs', icon: UserCheck, section: 'access_logs' },
-    { name: 'Events', href: '/admin/events', icon: PartyPopper, section: 'events' },
-    { name: 'Reports', href: '/admin/reports', icon: BarChart3, section: 'reports' },
-  ];
-
-  // Add Super Admin only items
-  const superAdminItems = isSuperAdmin() ? [
-    { name: 'Role Management', href: '/admin/roles', icon: Shield, section: null },
-    { name: 'Admin Users', href: '/admin/admin-users', icon: UserCog, section: null },
-  ] : [];
-
-  // Filter navigation items based on permissions
-  const navigationItems = loading ? [] : [
-    ...allNavigationItems.filter(item => 
-      !item.section || hasPermission(item.section, 'view')
-    ),
-    ...superAdminItems
+  const navigationItems = [
+    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'User Management', href: '/admin/users', icon: Users },
+    { name: 'Property Management', href: '/admin/properties', icon: Building },
+    { name: 'Room Management', href: '/admin/rooms', icon: Building },
+    { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
+    { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+    { name: 'Support Tickets', href: '/admin/tickets', icon: Ticket },
+    { name: 'Access Logs', href: '/admin/access-logs', icon: UserCheck },
+    { name: 'Events', href: '/admin/events', icon: PartyPopper },
+    { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   ];
 
   const isActive = (path: string) => location.pathname === path;
