@@ -48,10 +48,10 @@ const HowItWorks = () => {
       {/* Hero Section */}
       <section className="py-20 bg-gradient-hero text-primary-foreground">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+          <h1 className="text-4xl md:text-5xl text-foreground font-bold mb-6">
             How It Works
           </h1>
-          <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto opacity-90">
+          <p className="text-xl md:text-2xl text-foreground mb-8 max-w-3xl mx-auto opacity-90">
             Getting started with CoLiving is simple, transparent, and hassle-free.
           </p>
         </div>

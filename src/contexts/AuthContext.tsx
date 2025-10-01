@@ -84,6 +84,9 @@ interface BaseUser {
   id:string;
   token:string;
   role:string;
+  userType: string; 
+  fullName?: string;
+  profileImage?: string;
 }
 
 export interface NormalUser extends BaseUser{

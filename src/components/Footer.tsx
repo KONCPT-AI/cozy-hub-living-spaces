@@ -12,7 +12,7 @@ const Footer = () => {
               <div className="w-8 h-8 bg-secondary rounded-lg flex items-center justify-center">
                 <Home className="h-5 w-5 text-secondary-foreground" />
               </div>
-              <span className="text-xl font-bold"><img src="/logo.png" alt="Logo" className="w-27 h-10 object-contain" /></span>
+              <span className="text-xl font-bold"><img src="/logo.png" alt="Logo" className="w-auto h-12" style={{ width: "100px", height: "unset" }} /></span>
             </Link>
             <p className="text-primary-foreground/80">
               Creating comfortable, affordable co-living spaces for students and working professionals.

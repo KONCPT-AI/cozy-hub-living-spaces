@@ -46,7 +46,6 @@ const Profile = () => {
     bio: "",
     profileImage: "",
     emergencyContact: "",
-    livingPreferences: ""
   });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -266,8 +265,17 @@ const Profile = () => {
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-4 mb-6">
                   <div className={`w-20 h-20 ${userTypeInfo.color} rounded-full flex items-center justify-center text-white text-2xl font-bold`}>
-                    {formData?.fullName?.charAt(0) || 'U'}
+                    { formData.profileImage ? (
+                      <img
+                        src={`${baseURL}${formData.profileImage}`}
+                        alt="Profile"
+                        className="w-full h-full rounded-full object-cover border"
+                      />
+                    ) : (
+                      formData?.fullName?.charAt(0) || 'U'
+                    )}
                   </div>
+
                   <div>
                     <h3 className="text-xl font-semibold">{formData.fullName}</h3>
                     <Badge className="mb-2">{userTypeInfo.label}</Badge>
@@ -350,16 +358,6 @@ const Profile = () => {
                   {errors.emergencyContact && <p className="text-red-500 text-sm mt-1">{errors.emergencyContact}</p>}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Living Preferences</label>
-                  <Textarea
-                    value={formData.livingPreferences ?? ""}
-                    onChange={(e) => handleChange("livingPreferences", e.target.value)}
-                    disabled={!isEditing}
-                    rows={2}
-                  />
-                  {errors.livingPreferences && <p className="text-red-500 text-sm mt-1">{errors.livingPreferences}</p>}
-                </div>
               </CardContent>
             </Card>
 

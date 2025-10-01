@@ -86,7 +86,8 @@ const Login = () => {
           token: data.token,
           role: 'user',
           fullName: data.account.fullName,
-          userType: data.account.userType
+          userType: data.account.userType,
+          profileImage: data.account.profileImage || undefined
         };
         setUser(normalUser);
         sessionStorage.setItem('user', JSON.stringify(normalUser));
@@ -107,7 +108,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-primary flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -115,7 +116,7 @@ const Login = () => {
             <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center">
               <Home className="h-6 w-6 text-secondary-foreground" />
             </div>
-            <img src="/logo.png" alt="Logo" className="w-24 h-10 bg-gradient-primary rounded-lg object-contain" />
+            <img src="/logo.png" alt="Logo" className="w-20 h-19  rounded-lg object-contain" />
           </Link>
           <p className="text-primary-foreground/80  mt-2">Welcome back to your community</p>
         </div>

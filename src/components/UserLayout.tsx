@@ -2,14 +2,14 @@ import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Home, 
-  User, 
-  Building, 
-  Calendar, 
-  CreditCard, 
-  HeadphonesIcon, 
-  PartyPopper, 
+import {
+  Home,
+  User,
+  Building,
+  Calendar,
+  CreditCard,
+  HeadphonesIcon,
+  PartyPopper,
   LogOut,
   Menu,
   X,
@@ -18,6 +18,7 @@ import {
 import logo from '@public/logo.png';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+const baseURL = import.meta.env.VITE_API_BASE_URL;
 
 interface UserLayoutProps {
   children: ReactNode;
@@ -62,7 +63,7 @@ const UserLayout = ({ children }: UserLayoutProps) => {
     <div className="min-h-screen bg-background flex">
       {/* Mobile menu overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -96,7 +97,17 @@ const UserLayout = ({ children }: UserLayoutProps) => {
         <div className="p-6 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className={`w-10 h-10 ${getUserTypeColor()} rounded-full flex items-center justify-center text-white font-semibold`}>
-              {user?.fullName?.charAt(0) || 'U'}
+              {user?.profileImage ? (
+                <img
+                  src={`${baseURL}${user.profileImage}`}
+                  alt={`${user.fullName}'s profile`}
+                  className="w-10 h-10 rounded-full object-cover border"
+                />
+              ) : (
+                <span className="text-sm capitalize">
+                  {user?.fullName?.charAt(0) || "U"}
+                </span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user?.fullName || 'User'}</p>
@@ -111,11 +122,10 @@ const UserLayout = ({ children }: UserLayoutProps) => {
             <Link
               key={item.name}
               to={item.href}
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-                isActive(item.href)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-              }`}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${isActive(item.href)
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
               onClick={() => setIsSidebarOpen(false)}
             >
               <item.icon className="h-5 w-5" />

@@ -26,49 +26,68 @@ interface Ticket {
   updatedAt?: string;
 }
 const Support = () => {
-  const [tickets,setTickets]=useState<Ticket[]>([])
-  const [isLoading,setIsLoading]=useState(true)
-  const {toast}=useToast()
-  const {user}=useAuth()
-  const token = user?.token;  
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const { toast } = useToast()
+  const { user } = useAuth()
+  const token = user?.token;
   const [errors, setErrors] = useState<any>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activeRooms, setActiveRooms] = useState<{ id: number; roomNumber: string; propertyName: string }[]>([]);
   const [formData, setFormData] = useState({
     roomNumber: "",
-    date: "",
+    date: new Date().toISOString().split("T")[0],
     issue: "",
     description: "",
-    priority:"low"  });
+    priority: "low"
+  });
 
-  useEffect(()=>{
+  useEffect(() => {
     fetchTickets();
-  },[])
+    fetchActiveRooms();
+  }, [])
 
-  const fetchTickets=async()=>{
-    try{
-      const res=await axios.get(`${API_BASE_URL}/api/tickets/get-user-tickets`,{
-        headers:{Authorization:`Bearer ${token}`}
+  const fetchActiveRooms = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/tickets/getroom`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setActiveRooms(res.data.rooms || []);
+    } catch (error: any) {
+      console.error("Error fetching active rooms:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to fetch rooms",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchTickets = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/tickets/get-user-tickets`, {
+        headers: { Authorization: `Bearer ${token}` }
       })
       setTickets(res.data.tickets || [])
-    }catch(error:any){
+    } catch (error: any) {
       console.error(error);
-        toast({
-          title: "Error",
-          description: error.response?.data?.message || "Failed to fetch tickets",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to fetch tickets",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
-  
+  }
+
   const validateField = (field: string, value: string, data: typeof formData) => {
     let message = "";
 
     if (field === "roomNumber") {
-      if (!value.trim()) {
+      if (!value) {
         message = "Room number is required";
-      } 
+      }
     }
 
     if (field === "issue") {
@@ -80,7 +99,7 @@ const Support = () => {
     }
 
     if (field === "description") {
-        const desc = value ? String(value).trim() : "";
+      const desc = value ? String(value).trim() : "";
       if (desc !== "" && (desc.length < 10 || desc.length > 500)) {
         message = "Description must be 10 to 500 characters long";
       }
@@ -99,62 +118,62 @@ const Support = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-   const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string) => {
     const updatedData = { ...formData, [field]: value };
     setFormData(updatedData);
 
-     const message = validateField(field, value, updatedData);
+    const message = validateField(field, value, updatedData);
     setErrors((prev) => ({
       ...prev,
       [field]: message
     }));
   };
 
-   const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!validateForm()){
-       setIsLoading(false);
-       return;
+    if (!validateForm()) {
+      setIsLoading(false);
+      return;
     }
 
     try {
       const ticketData = {
-      roomNumber: formData.roomNumber,
-      date: formData.date,
-      issue: formData.issue,
-      description: formData.description,
-      priority: formData.priority,
+        roomNumber: formData.roomNumber,
+        date: formData.date,
+        issue: formData.issue,
+        description: formData.description,
+        priority: formData.priority,
       };
 
-      const res= await axios.post(
-          `${API_BASE_URL}/api/tickets/create`,
-          ticketData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+      const res = await axios.post(
+        `${API_BASE_URL}/api/tickets/create`,
+        ticketData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       toast({ title: "Success", description: "Ticket created successfully" });
       setIsDialogOpen(false);
       resetForm();
       fetchTickets();
     } catch (error: any) {
-    console.error("Error saving Ticket:", error);
-    toast({
-      title: "Error",
-      description: error.response?.data?.message || "Failed to save Ticket",
-      variant: "destructive",
-    });
-  } finally {
+      console.error("Error saving Ticket:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to save Ticket",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
     }
-  }; 
+  };
   const resetForm = () => {
     setFormData({
       roomNumber: "",
-      date: "",
+      date: new Date().toISOString().split("T")[0],
       issue: "",
       description: "",
-      priority:"low"
+      priority: "low"
     });
     setErrors({});
   };
@@ -164,7 +183,7 @@ const Support = () => {
     <UserLayout>
       <div className="p-6 max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">Support Center</h1>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
             <Card className="border-0 shadow-soft mb-6">
@@ -179,7 +198,7 @@ const Support = () => {
                         <p className="font-medium">{ticket.issue}</p>
                         <p className="text-sm text-muted-foreground">{ticket.date}</p>
                       </div>
-                      
+
                       <Badge variant={ticket.status === 'open' ? 'default' : 'secondary'}>
                         {ticket.status}
                       </Badge>
@@ -196,19 +215,28 @@ const Support = () => {
 
                 {/* create new ticket button + dialog */}
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Create New Ticket</DialogTitle>
-                    <DialogDescription>Fill in the details below to submit a support ticket</DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className='space-y-4'>
-                    <div>
-                        <Label>Room Number</Label>
-                        <Input
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Create New Ticket</DialogTitle>
+                      <DialogDescription>Fill in the details below to submit a support ticket</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className='space-y-4'>
+                      <div>
+                        <Select
                           value={formData.roomNumber}
-                          onChange={(e) => handleInputChange("roomNumber", e.target.value)}
-                          placeholder="Enter your room number"
-                        />
+                          onValueChange={(val) => handleInputChange("roomNumber", val)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Room Number" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activeRooms.map((room) => (
+                              <SelectItem  key={`${room.id}-${room.roomNumber}`} value={String(room.roomNumber)}>
+                                {room.roomNumber} - {room.propertyName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         {errors.roomNumber && <p className="text-red-500 text-sm">{errors.roomNumber}</p>}
                       </div>
                       <div>
@@ -226,7 +254,7 @@ const Support = () => {
                           onChange={(e) => handleInputChange("issue", e.target.value)}
                           placeholder="Enter the issue"
                         />
-                         {errors.issue && <p className="text-red-500 text-sm">{errors.issue}</p>}
+                        {errors.issue && <p className="text-red-500 text-sm">{errors.issue}</p>}
                       </div>
                       <div>
                         <Label>Description</Label>
@@ -237,8 +265,8 @@ const Support = () => {
                         />
                         {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
                       </div>
-                     
-                     <div>
+
+                      <div>
                         <Label>Priority</Label>
                         <Select
                           value={formData.priority}
