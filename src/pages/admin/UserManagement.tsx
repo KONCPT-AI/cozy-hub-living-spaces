@@ -344,7 +344,7 @@ const UserManagement = () => {
     return message;
   };
 
-  const handleAdminInputChangeWithValidation = (field: string, value: any) => {
+  const handleAdminInputChange = (field: string, value: any) => {
     setAdminForm(prev => ({ ...prev, [field]: value }));
 
     const message = validateAdminField(field, value);
@@ -408,10 +408,7 @@ const UserManagement = () => {
     }
   };
 
-  const handleAdminInputChange = (field: string, value: any) => {
-    setAdminForm((prev) => ({ ...prev, [field]: value }));
-  };
-
+  
   const resetAdminForm = () => {
     setAdminForm({
       email: '',
