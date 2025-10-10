@@ -12,7 +12,11 @@ import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/AdminLayout';
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
+const isAdminUser = (user: any): user is { properties: number[]; role: string } => {
+  return user && (user.role === 'admin' || user.role === 'super-admin');
+};
 
 const TicketManagement = () => {
   const [tickets, setTickets] = useState([]);
@@ -25,21 +29,35 @@ const TicketManagement = () => {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-   const { user } = useAuth();  
-    const token = user?.token;   
+  const { user } = useAuth();
+  const token = user?.token;
+  const { hasPermission } = useAuth();
+  const [filteredTickets, setFilteredTickets] = useState([]);
+
 
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
-      try {
+    try {
       const response = await axios.get(`${API_BASE_URL}/api/tickets/get-all-tickets`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setTickets(response.data.tickets || []);
+      let allTickets = response.data.tickets || [];
+
+      // If the user is not super-admin, filter tickets based on their assigned properties
+      if (user.role !== 'super-admin' && isAdminUser(user)) {
+        const assignedPropertyIds = user.properties || []; // array of property IDs assigned to admin
+        allTickets = allTickets.filter(ticket =>
+          assignedPropertyIds.includes(ticket.room?.propertyId)
+        );
+      }
+
+      setTickets(allTickets);
+      setFilteredTickets(allTickets);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -47,7 +65,7 @@ const TicketManagement = () => {
         description: 'Failed to fetch ticket data',
         variant: 'destructive',
       });
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -56,15 +74,15 @@ const TicketManagement = () => {
     if (!selectedTicket) return;
 
     try {
-      const payload={
+      const payload = {
         status: newStatus,
-        assignTo:assignTo==='unassigned'?null:assignTo,
+        assignTo: assignTo === 'unassigned' ? null : assignTo,
       };
-      const response=await axios.put(`${API_BASE_URL}/api/tickets/update-ticket-status/${selectedTicket.id}`,payload,
-        {headers:{Authorization:`Bearer ${token}`}})
-      
-      toast({ 
-        title: 'Success', 
+      const response = await axios.put(`${API_BASE_URL}/api/tickets/update-ticket-status/${selectedTicket.id}`, payload,
+        { headers: { Authorization: `Bearer ${token}` } })
+
+      toast({
+        title: 'Success',
         description: response.data.message || 'Ticket updated successfully',
       });
       fetchData();
@@ -159,133 +177,142 @@ const TicketManagement = () => {
             <CardTitle>Support Tickets</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tickets.map((ticket) => (
-                  <TableRow key={ticket.id}>
-                    <TableCell className="font-medium">{ticket.issue}</TableCell>
-                    <TableCell>{ticket.userId}</TableCell>
-                    <TableCell>
-                      <Badge variant={getPriorityColor(ticket.priority)}>
-                        {ticket.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(ticket.status)}>
-                        {ticket.status?.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{ticket.assigned_to ? getAdminName(ticket.assigned_to) : 'Unassigned'}</TableCell>
-                    <TableCell>{new Date(ticket.createdAt).toLocaleDateString('In')}</TableCell>
-                    <TableCell>
-                      <Dialog open={isDialogOpen && selectedTicket?.id === ticket.id} onOpenChange={(open) => {
-                        setIsDialogOpen(open);
-                        if (!open) {
-                          setSelectedTicket(null);
-                          setAssignTo('');
-                          setNewStatus('');
-                          setResolutionNotes('');
-                        }
-                      }}>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTicket(ticket);
-                              setAssignTo(ticket.assigned_to || '');
-                              setNewStatus(ticket.status);
-                              setResolutionNotes(ticket.resolution_notes || '');
-                            }}
-                          >
-                            Manage
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Manage Ticket: {ticket.title}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label>User</Label>
-                                <div className="text-sm text-muted-foreground">{ticket.userId}</div>
-                              </div>
-                              <div>
-                                <Label>Priority</Label>
-                                <div className="text-sm text-muted-foreground capitalize">{ticket.priority}</div>
-                              </div>
-                            </div>
-                            <div>
-                              <Label>Description</Label>
-                              <div className="text-sm text-muted-foreground">{ticket.description}</div>
-                            </div>
-                            <div>
-                              <Label htmlFor="assign_to">Assign To</Label>
-                              <Select value={assignTo} onValueChange={setAssignTo}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select admin user" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                                  {adminUsers.map((admin) => (
-                                    <SelectItem key={admin.userId} value={admin.userId}>
-                                      {admin.fullName || admin.email}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label htmlFor="status">Status</Label>
-                              <Select value={newStatus} onValueChange={setNewStatus}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="open">Open</SelectItem>
-                                  <SelectItem value="in_progress">In Progress</SelectItem>
-                                  <SelectItem value="resolved">Resolved</SelectItem>
-                                  <SelectItem value="closed">Closed</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label htmlFor="resolution_notes">Resolution Notes</Label>
-                              <Textarea
-                                id="resolution_notes"
-                                value={resolutionNotes}
-                                onChange={(e) => setResolutionNotes(e.target.value)}
-                                placeholder="Add resolution notes..."
-                              />
-                            </div>
-                            <div className="flex justify-end space-x-2">
-                              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                                Cancel
-                              </Button>
-                              <Button onClick={updateTicket}>
-                                Update Ticket
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
+            {hasPermission('Support Tickets', 'read') ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Room Number</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredTickets.map((ticket) => (
+                    <TableRow key={ticket.id}>
+                      <TableCell className="font-medium">{ticket.issue}</TableCell>
+                      <TableCell>{ticket.user}</TableCell>
+                      <TableCell>{ticket.room.property?.name}</TableCell>
+                      <TableCell>{ticket.room.roomNumber}</TableCell>
+                      <TableCell>
+                        <Badge variant={getPriorityColor(ticket.priority)}>
+                          {ticket.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusColor(ticket.status)}>
+                          {ticket.status?.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{ticket.assigned_to ? getAdminName(ticket.assigned_to) : 'Unassigned'}</TableCell>
+                      <TableCell>{new Date(ticket.createdAt).toLocaleDateString('In')}</TableCell>
+                      <TableCell>
+                        <Dialog open={isDialogOpen && selectedTicket?.id === ticket.id} onOpenChange={(open) => {
+                          setIsDialogOpen(open);
+                          if (!open) {
+                            setSelectedTicket(null);
+                            setAssignTo('');
+                            setNewStatus('');
+                            setResolutionNotes('');
+                          }
+                        }}>
+                          <DialogTrigger asChild>
+                            {hasPermission('Support Tickets', 'write') && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTicket(ticket);
+                                  setAssignTo(ticket.assigned_to || '');
+                                  setNewStatus(ticket.status);
+                                  setResolutionNotes(ticket.resolution_notes || '');
+                                }}
+                              >
+                                Manage
+                              </Button>)}
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Manage Ticket: {ticket.title}</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label>User</Label>
+                                  <div className="text-sm text-muted-foreground">{ticket.userId}</div>
+                                </div>
+                                <div>
+                                  <Label>Priority</Label>
+                                  <div className="text-sm text-muted-foreground capitalize">{ticket.priority}</div>
+                                </div>
+                              </div>
+                              <div>
+                                <Label>Description</Label>
+                                <div className="text-sm text-muted-foreground">{ticket.description}</div>
+                              </div>
+                              <div>
+                                <Label htmlFor="assign_to">Assign To</Label>
+                                <Select value={assignTo} onValueChange={setAssignTo}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select admin user" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {adminUsers.map((admin) => (
+                                      <SelectItem key={admin.userId} value={admin.userId}>
+                                        {admin.fullName || admin.email}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label htmlFor="status">Status</Label>
+                                <Select value={newStatus} onValueChange={setNewStatus}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="open">Open</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="resolved">Resolved</SelectItem>
+                                    <SelectItem value="closed">Closed</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label htmlFor="resolution_notes">Resolution Notes</Label>
+                                <Textarea
+                                  id="resolution_notes"
+                                  value={resolutionNotes}
+                                  onChange={(e) => setResolutionNotes(e.target.value)}
+                                  placeholder="Add resolution notes..."
+                                />
+                              </div>
+                              <div className="flex justify-end space-x-2">
+                                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                                  Cancel
+                                </Button>
+                                <Button onClick={updateTicket}>
+                                  Update Ticket
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-red-500 font-bold p-4">Access Denied: You cannot view Support Tickets.</div>
+            )}
           </CardContent>
         </Card>
       </div>

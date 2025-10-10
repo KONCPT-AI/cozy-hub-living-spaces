@@ -83,7 +83,7 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-accent">
+      <section className="py-20 [background-color:#f3e4c3]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -95,10 +95,11 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => <Card key={index} className="bg-background border-0 shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-yellow-50">
-                    <feature.icon className="h-8 w-8 text-secondary" />
+            {features.map((feature, index) => <Card key={index} 
+            className="bg-[#f3e4c3] border border-border  text-card-foreground shadow-sm shadow-soft hover:shadow-medium transition-all duration-300  rounded-2xl hover:-translate-y-1"> 
+                <CardContent className="p-6 text-center ">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-[#d89531]">
+                    <feature.icon className="h-8 w-8 " />
                   </div>
                   <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
                   <p className="text-muted-foreground">{feature.description}</p>
@@ -178,12 +179,12 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-hero text-primary-foreground">
+      <section className="py-20 bg-[#ffffeb] text-primary-foreground">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
             Ready to Join Our Community?
           </h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+          <p className="text-xl mb-8 max-w-2xl mx-auto text-foreground opacity-90">
             Start your co-living journey today and discover a new way to live, work, and connect.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

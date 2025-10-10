@@ -21,7 +21,7 @@
   address?: string;
   amenities?: string[];
   images?: string[];
-}
+  }
 
   interface RoomFormData {
     propertyId: number | null;
@@ -38,6 +38,10 @@
     images?: (File | string)[];
     removedImages?: string[];
   }
+
+  const isAdminUser = (user: any): user is { properties: number[]; role: string } => {
+    return user && (user.role === 'admin' || user.role === 'super-admin');
+  };
 
   const RoomManagement = () => {
     const [rooms, setRooms] = useState<any[]>([]);
@@ -63,9 +67,10 @@
     const [errors, setErrors] = useState<any>({});
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user,hasPermission } = useAuth();
     const token = user?.token;
-
+    const [filteredRooms, setFilteredRooms] = useState([]);
+      
     useEffect(() => {
       fetchRooms();
       fetchProperties();
@@ -76,7 +81,13 @@
         const response = await axios.get(`${API_BASE_URL}/api/property/getAll`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setProperties(response.data);
+        const propData=response.data;
+        let propertiesToShow = propData;
+      if (user.role !== 'super-admin' && isAdminUser(user)) {
+        const accessibleProps = user.properties || [];
+          propertiesToShow = propData.filter((p) => accessibleProps.includes(Number(p.id)));
+      } 
+      setProperties(propertiesToShow);
       } catch (error) {
         console.error(error);
       }
@@ -85,7 +96,17 @@
     const fetchRooms = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/api/rooms/getall`);
-        setRooms(response.data.rooms || []);
+        const RoomData=response.data.rooms || [];
+         // Filter based on role
+      let roomsToShow = RoomData;
+      if (user.role !== 'super-admin' && isAdminUser(user)) {
+        const accessibleProps = user.properties || [];
+        roomsToShow = RoomData.filter(
+          (b) => accessibleProps.includes(b.propertyId)
+        );
+      }
+        setRooms(roomsToShow);
+        setFilteredRooms(roomsToShow);
       } catch (error) {
         console.error(error);
       }
@@ -273,9 +294,10 @@
             </h1>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
+                {hasPermission('Room Management','write') && (
                 <Button onClick={() => { resetForm(); setSelectedRoom(null); }}>
                   <Plus className="h-4 w-4 mr-2" /> Add Room
-                </Button>
+                </Button>)}
               </DialogTrigger>
               <DialogContent className="max-w-2xl ">
                 <DialogHeader>
@@ -419,6 +441,7 @@
           <Card>
             <CardHeader><CardTitle>All Rooms ({rooms.length})</CardTitle></CardHeader>
             <CardContent>
+               {hasPermission('Room Management', 'read') ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -433,7 +456,7 @@
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rooms.map(room => (
+                  {filteredRooms.map(room => (
                     <TableRow key={room.id}>
                       <TableCell>{room.property?.name || 'No Property'}</TableCell>
                       <TableCell>{room.roomNumber}</TableCell>
@@ -442,14 +465,19 @@
                       <TableCell>₹{Number(room.monthlyRent || 0).toLocaleString()}</TableCell>
                       <TableCell><Badge variant={room.status === 'available' ? 'default' : 'destructive'}>{room.status}</Badge></TableCell>
                       <TableCell>{room.occupancy || `0/${room.capacity}`}</TableCell>
+                        {hasPermission('Room Management','write') && (
                       <TableCell className="space-x-2">
                         <Button size="sm" variant="outline" onClick={() => editRoom(room)}><Edit className="h-4 w-4" /></Button>
                         <Button size="sm" variant="destructive" onClick={() => deleteRoom(room.id)}><Trash2 className="h-4 w-4" /></Button>
-                      </TableCell>
+                        </TableCell>
+                        )}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              ) : (
+              <div className="text-red-500 font-bold p-4">Access Denied: You cannot view bookings.</div>
+            )}
             </CardContent>
           </Card>
         </div>

@@ -27,6 +27,10 @@ interface Property {
   is_active: boolean;
 }
 
+const isAdminUser = (user: any): user is { properties: number[]; role: string } => {
+  return user && (user.role === 'admin' || user.role === 'super-admin');
+};
+
 const PropertyManagement = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -43,7 +47,8 @@ const PropertyManagement = () => {
   }); 
   const { toast } = useToast();
   const [errors, setErrors] = useState<any>({});
-  const { user } = useAuth();  
+  const { user ,hasPermission} = useAuth();  
+  const [filteredProperty, setFilteredProperty] = useState([]);
   const token = user?.token;   
 
   useEffect(() => {
@@ -114,7 +119,15 @@ const PropertyManagement = () => {
           ? p.amenities.split(",").map((a: string) => a.trim())
           : p.amenities,
       }));
-      setProperties(data);
+      
+      //for admin view property wise
+      let propertiesToShow = data;
+      if (user.role !== 'super-admin' && isAdminUser(user)) {
+        const accessibleProps = user.properties || [];
+          propertiesToShow = data.filter((p) => accessibleProps.includes(Number(p.id)));
+      }
+      setProperties(propertiesToShow);
+      setFilteredProperty(propertiesToShow);
     } catch (error) {
       console.error("Error fetching properties:", error);
       toast({
@@ -128,6 +141,9 @@ const PropertyManagement = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+     if (isLoading) return;
+     
+    setIsLoading(true);
      if (!validateForm()){
        setIsLoading(false);
        return;
@@ -182,7 +198,12 @@ const PropertyManagement = () => {
         title: "Error",
         description: error.response.data.errors[0].msg,
         variant: "destructive",
-      });}else {
+      });}else if (error.response?.data?.message) {
+      toast({
+        title: "Error",
+        description: error.response.data.message,
+        variant: "destructive",
+      });}  else {
       toast({
         title: "Error",
         description: "Failed to save property",
@@ -251,7 +272,7 @@ const PropertyManagement = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Property Management</h1>
@@ -259,10 +280,11 @@ const PropertyManagement = () => {
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
+              {hasPermission('Property Management','write') && (
               <Button onClick={resetForm}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Property
-              </Button>
+              </Button>)}
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
@@ -275,7 +297,7 @@ const PropertyManagement = () => {
                     : "Fill in the details to create a new property"}
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto  max-h-[80vh] scrollbar-hide">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Property Name</Label>
@@ -311,8 +333,8 @@ const PropertyManagement = () => {
                 </div>
                 {/* Images */}
                     <div>
-                      <Label>Room Images</Label>
-                      <Input type="file" multiple accept="image/*" onChange={(e) => {
+                      <Label>Property Images</Label>
+                      <Input type="file" name="propertyImages" multiple accept="image/*" onChange={(e) => {
                         if(e.target.files) {
                           setFormData({ ...formData, images: [...(formData.images || []), ...Array.from(e.target.files)] });
                         }
@@ -383,6 +405,7 @@ const PropertyManagement = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {hasPermission('Property Management', 'read') ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -395,7 +418,7 @@ const PropertyManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {properties.map((property) => (
+                {filteredProperty.map((property) => (
                   <TableRow key={property.id}>
                     <TableCell>
                       <div className="flex items-center space-x-2">
@@ -434,6 +457,7 @@ const PropertyManagement = () => {
                       {new Date(property.createdAt).toLocaleDateString("en-IN")}
                     </TableCell>
                     <TableCell>
+                      {hasPermission('Property Management','write') && (
                       <div className="flex items-center space-x-2">
                         <Button
                           variant="outline"
@@ -450,11 +474,15 @@ const PropertyManagement = () => {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+             ) : (
+              <div className="text-red-500 font-bold p-4">Access Denied: You cannot view bookings.</div>
+            )}
           </CardContent>
         </Card>
       </div>

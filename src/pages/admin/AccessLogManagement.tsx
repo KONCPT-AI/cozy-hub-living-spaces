@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import AdminLayout from '@/components/AdminLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -197,249 +198,251 @@ export default function AccessLogManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Access Log Management</h1>
-          <p className="text-muted-foreground">Monitor check-in/check-out activities and manage property settings</p>
+    <AdminLayout>
+      <div className=" p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Access Log Management</h1>
+            <p className="text-muted-foreground">Monitor check-in/check-out activities and manage property settings</p>
+          </div>
         </div>
-      </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="w-5 h-5" />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="property-filter">Property</Label>
-              <Select value={selectedProperty} onValueChange={setSelectedProperty}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Properties" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Properties</SelectItem>
-                  {properties.map((property) => (
-                    <SelectItem key={property.id} value={property.id}>
-                      {property.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Filters & Search
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="property-filter">Property</Label>
+                <Select value={selectedProperty} onValueChange={setSelectedProperty}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Properties" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Properties</SelectItem>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="auth-method-filter">Authentication Method</Label>
+                <Select value={selectedAuthMethod} onValueChange={setSelectedAuthMethod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Methods" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Methods</SelectItem>
+                    <SelectItem value="face_recognition">Face Recognition</SelectItem>
+                    <SelectItem value="fingerprint">Fingerprint</SelectItem>
+                    <SelectItem value="smart_card">Smart Card</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="date-filter">Date</Label>
+                <Input
+                  id="date-filter"
+                  type="date"
+                  value={searchDate}
+                  onChange={(e) => setSearchDate(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>&nbsp;</Label>
+                <Button 
+                  onClick={() => {
+                    setSelectedProperty("all");
+                    setSelectedAuthMethod("all");
+                    setSearchDate("");
+                  }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Clear Filters
+                </Button>
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <Label htmlFor="auth-method-filter">Authentication Method</Label>
-              <Select value={selectedAuthMethod} onValueChange={setSelectedAuthMethod}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Methods" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Methods</SelectItem>
-                  <SelectItem value="face_recognition">Face Recognition</SelectItem>
-                  <SelectItem value="fingerprint">Fingerprint</SelectItem>
-                  <SelectItem value="smart_card">Smart Card</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date-filter">Date</Label>
-              <Input
-                id="date-filter"
-                type="date"
-                value={searchDate}
-                onChange={(e) => setSearchDate(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>&nbsp;</Label>
-              <Button 
-                onClick={() => {
-                  setSelectedProperty("all");
-                  setSelectedAuthMethod("all");
-                  setSearchDate("");
-                }}
-                variant="outline"
-                className="w-full"
-              >
-                Clear Filters
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Property Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            Property Curfew Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {properties.map((property) => {
-              const settings = propertySettings.find(s => s.property_id === property.id);
-              return (
-                <Card key={property.id} className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-medium">{property.name}</h3>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openSettingsDialog(property.id)}
-                    >
-                      <Settings className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  {settings ? (
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      <p>Curfew: {settings.curfew_start_time} - {settings.curfew_end_time}</p>
-                      <p>Notifications: {settings.late_entry_notifications_enabled ? "Enabled" : "Disabled"}</p>
+        {/* Property Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Property Curfew Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {properties.map((property) => {
+                const settings = propertySettings.find(s => s.property_id === property.id);
+                return (
+                  <Card key={property.id} className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-medium">{property.name}</h3>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openSettingsDialog(property.id)}
+                      >
+                        <Settings className="w-4 h-4" />
+                      </Button>
                     </div>
-                  ) : (
-                    <p className="text-sm text-orange-600">No settings configured</p>
-                  )}
-                </Card>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Access Logs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCheck className="w-5 h-5" />
-            Access Logs
-            {logs.filter(log => log.is_late_entry).length > 0 && (
-              <Badge className="bg-orange-100 text-orange-800">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                {logs.filter(log => log.is_late_entry).length} Late Entries
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8">Loading...</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Auth Method</TableHead>
-                  <TableHead>Device</TableHead>
-                  <TableHead>Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {logs.map((log) => (
-                  <TableRow key={log.id} className={log.is_late_entry ? "bg-orange-50" : ""}>
-                    <TableCell>
-                      {format(new Date(log.timestamp), "MMM dd, yyyy HH:mm")}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{log.profiles?.full_name || "Unknown"}</p>
-                        <p className="text-sm text-muted-foreground">{log.profiles?.email}</p>
+                    {settings ? (
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        <p>Curfew: {settings.curfew_start_time} - {settings.curfew_end_time}</p>
+                        <p>Notifications: {settings.late_entry_notifications_enabled ? "Enabled" : "Disabled"}</p>
                       </div>
-                    </TableCell>
-                    <TableCell>{log.properties?.name}</TableCell>
-                    <TableCell>{log.rooms?.room_number || "-"}</TableCell>
-                    <TableCell>
-                      {getCheckTypeBadge(log.check_type, log.is_late_entry)}
-                    </TableCell>
-                    <TableCell>
-                      {getAuthMethodBadge(log.authentication_method)}
-                    </TableCell>
-                    <TableCell>{log.device_id || "-"}</TableCell>
-                    <TableCell>{log.notes || "-"}</TableCell>
-                  </TableRow>
-                ))}
-                {logs.length === 0 && (
+                    ) : (
+                      <p className="text-sm text-orange-600">No settings configured</p>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Access Logs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="w-5 h-5" />
+              Access Logs
+              {logs.filter(log => log.is_late_entry).length > 0 && (
+                <Badge className="bg-orange-100 text-orange-800">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  {logs.filter(log => log.is_late_entry).length} Late Entries
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-8">Loading...</div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No access logs found
-                    </TableCell>
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Auth Method</TableHead>
+                    <TableHead>Device</TableHead>
+                    <TableHead>Notes</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log) => (
+                    <TableRow key={log.id} className={log.is_late_entry ? "bg-orange-50" : ""}>
+                      <TableCell>
+                        {format(new Date(log.timestamp), "MMM dd, yyyy HH:mm")}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{log.profiles?.full_name || "Unknown"}</p>
+                          <p className="text-sm text-muted-foreground">{log.profiles?.email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{log.properties?.name}</TableCell>
+                      <TableCell>{log.rooms?.room_number || "-"}</TableCell>
+                      <TableCell>
+                        {getCheckTypeBadge(log.check_type, log.is_late_entry)}
+                      </TableCell>
+                      <TableCell>
+                        {getAuthMethodBadge(log.authentication_method)}
+                      </TableCell>
+                      <TableCell>{log.device_id || "-"}</TableCell>
+                      <TableCell>{log.notes || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                  {logs.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        No access logs found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Settings Dialog */}
-      <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Property Curfew Settings</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="curfew-start">Curfew Start Time</Label>
-              <Input
-                id="curfew-start"
-                type="time"
-                value={curfewStart}
-                onChange={(e) => setCurfewStart(e.target.value)}
-              />
-            </div>
+        {/* Settings Dialog */}
+        <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Property Curfew Settings</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="curfew-start">Curfew Start Time</Label>
+                <Input
+                  id="curfew-start"
+                  type="time"
+                  value={curfewStart}
+                  onChange={(e) => setCurfewStart(e.target.value)}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="curfew-end">Curfew End Time</Label>
-              <Input
-                id="curfew-end"
-                type="time"
-                value={curfewEnd}
-                onChange={(e) => setCurfewEnd(e.target.value)}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="curfew-end">Curfew End Time</Label>
+                <Input
+                  id="curfew-end"
+                  type="time"
+                  value={curfewEnd}
+                  onChange={(e) => setCurfewEnd(e.target.value)}
+                />
+              </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="notifications-enabled"
-                checked={notificationsEnabled}
-                onCheckedChange={setNotificationsEnabled}
-              />
-              <Label htmlFor="notifications-enabled">Enable late entry notifications</Label>
-            </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="notifications-enabled"
+                  checked={notificationsEnabled}
+                  onCheckedChange={setNotificationsEnabled}
+                />
+                <Label htmlFor="notifications-enabled">Enable late entry notifications</Label>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notification-emails">Notification Recipients (comma-separated emails)</Label>
-              <Textarea
-                id="notification-emails"
-                placeholder="admin@example.com, security@example.com"
-                value={notificationEmails}
-                onChange={(e) => setNotificationEmails(e.target.value)}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="notification-emails">Notification Recipients (comma-separated emails)</Label>
+                <Textarea
+                  id="notification-emails"
+                  placeholder="admin@example.com, security@example.com"
+                  value={notificationEmails}
+                  onChange={(e) => setNotificationEmails(e.target.value)}
+                />
+              </div>
 
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setSettingsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveSettings}>
-                Save Settings
-              </Button>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setSettingsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveSettings}>
+                  Save Settings
+                </Button>
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AdminLayout>
   );
 }

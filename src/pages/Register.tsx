@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,8 +24,14 @@ const Register = () => {
     gender: '',
     password: '',
     confirmPassword: '',
-    userType: 'student' as 'student' | 'professional'
+    userType: 'student' as 'student' | 'professional',
+    otp: "",
+    dateOfBirth: ""
   });
+
+  const [otpSent, setOtpSent] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0); // seconds
+  const [isVerified, setIsVerified] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -61,6 +67,23 @@ const Register = () => {
       }
     }
 
+    if (field === "dateOfBirth") {
+      if (!value) {
+        message = "Date of Birth is required";
+      } else {
+        const birthDate = new Date(value);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        if (age < 18) {
+          message = "You must be at least 18 years old to register";
+        }
+      }
+    }
+
     if (field === "password") {
       if (!value) {
         message = "Password is required";
@@ -84,6 +107,29 @@ const Register = () => {
     }
 
     return message;
+  };
+
+  useEffect(() => {
+    let timer: any;
+    if (timeLeft > 0) {
+      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  const handleSendOtp = async () => {
+    if (!formData.email) {
+      toast({ title: "Error", description: "Please enter your email", variant: "destructive" });
+      return;
+    }
+    try {
+      await axios.post(`${API_BASE_URL}/api/user/send-otp`, { email: formData.email });
+      toast({ title: "OTP Sent", description: "Check your email for verification code" });
+      setOtpSent(true);
+      setTimeLeft(300); // 5 minutes
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data?.message || "Failed to send OTP", variant: "destructive" });
+    }
   };
 
   //validate all fields
@@ -172,7 +218,7 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-primary flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -180,7 +226,7 @@ const Register = () => {
             <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center">
               <Home className="h-6 w-6 text-secondary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-primary-foreground">CoLiving</span>
+            <img src="/logo.png" alt="Logo" className="w-20 h-19  rounded-lg object-contain" />
           </Link>
           <p className="text-primary-foreground/80 mt-2">Join our co-living community</p>
         </div>
@@ -234,6 +280,17 @@ const Register = () => {
                     <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date of Birth</label>
+                <Input
+                  type="date"
+                  value={formData.dateOfBirth}
+                  max={new Date().toISOString().split("T")[0]} // prevents future dates
+                  onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                />
+                {errors.dateOfBirth && <p className="text-red-500 text-sm">{errors.dateOfBirth}</p>}
               </div>
 
               {/* Phone Number */}
@@ -318,8 +375,38 @@ const Register = () => {
                 {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword}</p>}
               </div>
 
+              {/* OTP */}
+              <div className="flex gap-2 items-center mb-2">
+                <Input
+                  placeholder="Enter OTP"
+                  value={formData.otp}
+                  onChange={(e) => handleInputChange("otp", e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={timeLeft > 0}
+                >
+                  {otpSent ? "Resend OTP" : "Send OTP"}
+                </Button>
+              </div>
+
+              {/* otp timer and expiry msg */}
+              {otpSent && (
+                <p className="text-xs mt-1">
+                  {timeLeft > 0 ? (
+                    <span className="text-gray-500">
+                      OTP expires in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
+                    </span>
+                  ) : (
+                    <span className="text-red-500">OTP expired, please resend</span>
+                  )}
+                </p>
+              )}
+
               {/* Submit Button */}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" onClick={handleSubmit} disabled={isLoading || !formData.otp || timeLeft === 0} className="w-full">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -329,6 +416,7 @@ const Register = () => {
                   'Create Account'
                 )}
               </Button>
+
             </form>
 
             <div className="text-center">

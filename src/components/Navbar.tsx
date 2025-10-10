@@ -18,16 +18,16 @@ const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50 shadow-soft">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className=" bg-primary backdrop-blur-sm  sticky top-0 z-50 shadow-soft">
+      <div className="max-w-7xl mx-auto px-6 py-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <Home className="h-5 w-5 text-primary-foreground" />
+              <Home className="h-6 w-6 text-primary-foreground"  />
             </div>
-            <span className="text-xl font-bold px-3 bg-gradient-primary rounded-lg">
-               <img src="/logo.png" alt="Logo" className="w-24 h-10 object-contain" />
+            <span className="text-xl font-bold px-3 space-x-2 rounded-lg">
+               <img src="/logo.png" alt="Logo" className="w-auto h-12" style={{ width: "100px", height: "unset" }} />
             </span>
           </Link>
 
@@ -40,7 +40,7 @@ const Navbar = () => {
                 className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
                   isActive(item.href)
                     ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    : 'text-primary-foreground hover:text-foreground hover:bg-accent'
                 }`}
               >
                 <item.icon className="h-4 w-4" />

@@ -29,6 +29,7 @@ import {
   Users,
   Bell
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select';
 import { ToastProvider } from '@radix-ui/react-toast';
 // import { useToast } from '@/hooks/use-toast';
 
@@ -43,16 +44,20 @@ const Profile = () => {
     email: "",
     phone: "",
     address: "",
-    bio: "",
     profileImage: "",
-    emergencyContact: "",
-    livingPreferences: ""
+    parentName: "",
+    parentMobile: "",
+    foodPreference: "",
+    allergies: "",
+    collegeName: "",
+    course: "",
+    companyName: "",
+    position: ""
   });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -84,15 +89,53 @@ const Profile = () => {
 
   const validateField = (name: string, value: string) => {
     let message = "";
-    if (name === "fullName" && !value.trim()) {
-      message = "Full Name is required.";
+    if (name === "fullName") {
+      if (!value.trim()) {
+        message = "Full Name is required.";
+      } else {
+        const regex = /^[A-Za-z\s'-]{2,50}$/;
+        if (!regex.test(value.trim())) {
+          message = "Full Name contains only characters or is too short/long.";
+        }
+      }
     }
-    if (name === "email" && value) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(value)) message = "Invalid email format.";
+    if (name === "email") {
+      if (!value.trim()) {
+        message = "Email is required.";
+      } else {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) message = "Invalid email format.";
+      }
     }
-    if (name === "phone" && value) {
-      if (!/^\d{10}$/.test(value)) message = "Phone must be 10 digits.";
+    if (name === "address") {
+      if (value && value.length > 200) {
+        message = "Address is too long (max 200 characters).";
+      }
+    }
+    if (name === "parentName") {
+      if (value && !/^[A-Za-z\s'-]{2,50}$/.test(value.trim())) {
+        message = "Parent Name contains only letters or is too short/long.";
+      }
+    }
+
+    if (name === "parentMobile") {
+      if (value && !/^\d{10}$/.test(value)) {
+        message = "Parent Mobile must be 10 digits.";
+      }
+    } if (name === "collegeName" || name === "course" || name === "companyName" || name === "position") {
+      const regex = /^[A-Za-z\s&'.\-]{2,100}$/; // letters & common symbols only
+      const onlyDigits = /^\d+$/; //  number check
+
+      if (onlyDigits.test(value.trim())) {
+        message = `${name.replace(/([A-Z])/g, ' $1')} cannot be only digits.`;
+      } else if (!regex.test(value.trim())) {
+        message = `${name.replace(/([A-Z])/g, ' $1')} contains invalid characters or is too short/long (2-100 chars).`;
+      }
+    }
+    if (name === "allergies") {
+      if (value && value.length > 200) {
+        message = "Allergies text is too long (max 200 characters).";
+      }
     }
     return message;
   };
@@ -121,8 +164,8 @@ const Profile = () => {
       const data = new FormData();
       Object.keys(formData).forEach((key) => {
         const value = (formData as any)[key];
-        if (value !== null && value !== undefined && String(value).trim() !== "") {
-          data.append(key, value);
+        if (value !== undefined && value !== null) {
+          data.append(key, value); // include empty string
         }
       });
       if (profileImage) {
@@ -266,8 +309,17 @@ const Profile = () => {
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-4 mb-6">
                   <div className={`w-20 h-20 ${userTypeInfo.color} rounded-full flex items-center justify-center text-white text-2xl font-bold`}>
-                    {formData?.fullName?.charAt(0) || 'U'}
+                    {formData.profileImage ? (
+                      <img
+                        src={`${baseURL}${formData.profileImage}`}
+                        alt="Profile"
+                        className="w-full h-full rounded-full object-cover border"
+                      />
+                    ) : (
+                      formData?.fullName?.charAt(0) || 'U'
+                    )}
                   </div>
+
                   <div>
                     <h3 className="text-xl font-semibold">{formData.fullName}</h3>
                     <Badge className="mb-2">{userTypeInfo.label}</Badge>
@@ -314,9 +366,8 @@ const Profile = () => {
                     <Input
                       value={formData.phone}
                       onChange={(e) => handleChange("phone", e.target.value)}
-                      disabled={!isEditing}
+                      disabled
                     />
-                    {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Address</label>
@@ -329,37 +380,98 @@ const Profile = () => {
                   </div>
                 </div>
 
+                {user?.userType === "student" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Parent Name</label>
+                      <Input
+                        value={formData.parentName || ""}
+                        onChange={(e) => handleChange("parentName", e.target.value)}
+                        disabled={!isEditing}
+                      />
+                      {errors.parentName && <p className="text-red-500 text-sm mt-1">{errors.parentName}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Parent Mobile</label>
+                      <Input
+                        value={formData.parentMobile || ""}
+                        onChange={(e) => handleChange("parentMobile", e.target.value)}
+                        disabled={!isEditing}
+                      />
+                      {errors.parentMobile && <p className="text-red-500 text-sm mt-1">{errors.parentMobile}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">College Name</label>
+                      <Input
+                        value={formData.collegeName || ""}
+                        onChange={(e) => handleChange("collegeName", e.target.value)}
+                        disabled={!isEditing}
+                      />
+                      {errors.collegeName && <p className="text-red-500 text-sm mt-1">{errors.collegeName}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Course</label>
+                      <Input
+                        value={formData.course || ""}
+                        onChange={(e) => handleChange("course", e.target.value)}
+                        disabled={!isEditing}
+                      />
+                      {errors.course && <p className="text-red-500 text-sm mt-1">{errors.course}</p>}
+                    </div>
+
+                  </>)}
+                {user?.userType === "professional" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Company Name</label>
+                      <Input
+                        value={formData.companyName || ""}
+                        onChange={(e) => handleChange("companyName", e.target.value)}
+                        disabled={!isEditing}
+                      />
+                      {errors.companyName && <p className="text-red-500 text-sm mt-1">{errors.companyName}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Position</label>
+                      <Input
+                        value={formData.position || ""}
+                        onChange={(e) => handleChange("position", e.target.value)}
+                        disabled={!isEditing}
+                      />
+                      {errors.position && <p className="text-red-500 text-sm mt-1">{errors.position}</p>}
+                    </div>
+                  </>
+                )}
+
                 <div>
-                  <label className="block text-sm font-medium mb-2">Bio</label>
-                  <Textarea
-                    value={formData.bio ?? " "}
-                    onChange={(e) => handleChange("bio", e.target.value)}
-                    disabled={!isEditing}
-                    rows={3}
-                  />
-                  {errors.bio && <p className="text-red-500 text-sm mt-1">{errors.bio}</p>}
+                  <label className="block text-sm font-medium mb-2">Food Preference</label>
+                  <Select value={formData.foodPreference || ""} onValueChange={(val) => handleChange("foodPreference", val)} disabled={!isEditing}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Jain">Jain</SelectItem>
+                      <SelectItem value="Non-Jain">Non-Jain</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.foodPreference && <p className="text-red-500 text-sm mt-1">{errors.foodPreference}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Emergency Contact</label>
-                  <Input
-                    value={formData.emergencyContact}
-                    onChange={(e) => handleChange("emergencyContact", e.target.value)}
-                    disabled={!isEditing}
-                  />
-                  {errors.emergencyContact && <p className="text-red-500 text-sm mt-1">{errors.emergencyContact}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Living Preferences</label>
+                  <label className="block text-sm font-medium mb-2">Allergies</label>
                   <Textarea
-                    value={formData.livingPreferences ?? ""}
-                    onChange={(e) => handleChange("livingPreferences", e.target.value)}
+                    value={formData.allergies || ""}
+                    onChange={(e) => handleChange("allergies", e.target.value)}
                     disabled={!isEditing}
                     rows={2}
                   />
-                  {errors.livingPreferences && <p className="text-red-500 text-sm mt-1">{errors.livingPreferences}</p>}
+                  {errors.allergies && <p className="text-red-500 text-sm mt-1">{errors.allergies}</p>}
                 </div>
+
               </CardContent>
             </Card>
 
@@ -443,19 +555,19 @@ const Profile = () => {
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Email Verified</span>
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  {/* <CheckCircle className="h-4 w-4 text-green-500" /> */}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Phone Verified</span>
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  {/* <CheckCircle className="h-4 w-4 text-green-500" /> */}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">ID Verified</span>
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  {/* <CheckCircle className="h-4 w-4 text-green-500" /> */}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Background Check</span>
-                  <Clock className="h-4 w-4 text-orange-500" />
+                  {/* <Clock className="h-4 w-4 text-orange-500" /> */}
                 </div>
               </CardContent>
             </Card>

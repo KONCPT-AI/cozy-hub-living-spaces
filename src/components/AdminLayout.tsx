@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,9 +18,14 @@ import {
   X,
   UserCheck
 } from 'lucide-react';
-import { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
 
+import { useToast } from '@/hooks/use-toast';
+interface AdminUser {
+  id: number;
+  fullName: string;
+  role: string;
+  pages?: string[]; // pages the admin has access to
+}
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -32,7 +37,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const navigationItems = [
+  // Full navigation list
+  const allNavigationItems = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'User Management', href: '/admin/users', icon: Users },
     { name: 'Property Management', href: '/admin/properties', icon: Building },
@@ -44,6 +50,39 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Events', href: '/admin/events', icon: PartyPopper },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   ];
+
+  // Map backend names → frontend names
+  const pageMap: Record<string, string> = {
+    "User Management": "User Management",
+    "Booking Management": "Bookings",
+    "Property Management": "Property Management",
+    "Room Management": "Room Management",
+    "Payment Management": "Payments",
+    "Support Tickets":"Support Tickets",
+    "Event Management": "Events",
+    "Reports": "Reports",
+    "Dashboard": "Dashboard"
+  };
+// Filter navigation based on user pages
+const navigationItems = useMemo(() => {
+  if (!user) return [];
+  if (user.role === 'super-admin') return allNavigationItems;
+
+  if ('pages' in user && Array.isArray(user.pages)) {
+    // Extract names from objects or fallback to strings
+    const allowedNames = user.pages
+      .map(page => (typeof page === 'string' ? page : page.name)) // support {id, name} objects
+      .map(name => pageMap[name] || name) // map backend → frontend
+      .map(name => name.toLowerCase().replace(/\s+/g, '')); // normalize
+
+    return allNavigationItems.filter(item =>
+      allowedNames.includes(item.name.toLowerCase().replace(/\s+/g, ''))
+    );
+  }
+
+  return [];
+}, [user]);
+
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -58,7 +97,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Mobile menu overlay */}
+      {/* Mobile overlay */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -71,6 +110,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         fixed lg:static inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
+        {/* Logo */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-border">
           <Link to="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
@@ -97,7 +137,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
               <Shield className="h-5 w-5 text-secondary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name || 'Admin'}</p>
+              <p className="text-sm font-medium truncate">{user?.fullName || 'Admin'}</p>
               <Badge variant="secondary" className="text-xs">Administrator</Badge>
             </div>
           </div>
@@ -105,7 +145,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
         {/* Navigation */}
         <nav className="p-4 space-y-2">
-          {navigationItems.map((item) => (
+          {navigationItems.map(item => (
             <Link
               key={item.name}
               to={item.href}
@@ -122,7 +162,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           ))}
         </nav>
 
-        {/* Logout Button */}
+        {/* Logout */}
         <div className="absolute bottom-4 left-4 right-4">
           <Button
             variant="outline"

@@ -5,13 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Home, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from "react-toastify";
-import { useAuth } from "@/contexts/AuthContext"; 
+import { useAuth } from "@/contexts/AuthContext";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
-import type { NormalUser } from "@/contexts/AuthContext"; 
+import type { NormalUser } from "@/contexts/AuthContext";
 
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -22,46 +22,46 @@ const Login = () => {
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
- const validateField = (field: string, value: string, data: { email: string; password: string }) => {
-  let message = "";
+  const validateField = (field: string, value: string, data: { email: string; password: string }) => {
+    let message = "";
 
-  if (field === "email") {
-    if (!value.trim()) {
-      message = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      message = "Enter a valid email address";
+    if (field === "email") {
+      if (!value.trim()) {
+        message = "Email is required";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        message = "Enter a valid email address";
+      }
     }
-  }
 
-  if (field === "password") {
-    if (!value) {
-      message = "Password is required";
-    } else if (value.length < 6) {
-      message = "Password must be at least 6 characters";
+    if (field === "password") {
+      if (!value) {
+        message = "Password is required";
+      } else if (value.length < 6) {
+        message = "Password must be at least 6 characters";
+      }
     }
-  }
 
-  return message;
-    };
+    return message;
+  };
 
-    const validateForm = (data: { email: string; password: string }) => {
-      const newErrors: { [key: string]: string } = {};
-      Object.keys(data).forEach((field) => {
-        const message = validateField(field, (data as any)[field], data);
-        if (message) newErrors[field] = message;
-      });
-      setErrors(newErrors);
-      return Object.keys(newErrors).length === 0;
-    };
+  const validateForm = (data: { email: string; password: string }) => {
+    const newErrors: { [key: string]: string } = {};
+    Object.keys(data).forEach((field) => {
+      const message = validateField(field, (data as any)[field], data);
+      if (message) newErrors[field] = message;
+    });
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    const handleInputChange = (field: "email" | "password", value: string) => {
-      const updatedData = { email, password, [field]: value };
-      if (field === "email") setEmail(value);
-      if (field === "password") setPassword(value);
+  const handleInputChange = (field: "email" | "password", value: string) => {
+    const updatedData = { email, password, [field]: value };
+    if (field === "email") setEmail(value);
+    if (field === "password") setPassword(value);
 
-      const message = validateField(field, value, updatedData);
-      setErrors((prev) => ({ ...prev, [field]: message }));
-    };
+    const message = validateField(field, value, updatedData);
+    setErrors((prev) => ({ ...prev, [field]: message }));
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,43 +71,55 @@ const Login = () => {
       setIsLoading(false);
       return;
     }
-      
     try {
       const res = await axios.post(`${API_BASE_URL}/api/common/login`, {
-         email: email.trim(),
+        email: email.trim(),
         password
-      }); 
+      });
 
       const data = res.data;
 
-      if (data.success && data.account.role !== 1) {
-        const normalUser: NormalUser = {
-          id: data.account.id,
-          token: data.token,
-          role: 'user',
-          fullName: data.account.fullName,
-          userType: data.account.userType
-        };
-        setUser(normalUser);
-        sessionStorage.setItem('user', JSON.stringify(normalUser));
+      if (data.success) {
+        const accountRole = data.account.role; // e.g., 'user', 'admin', 'super-admin'
+        if (accountRole === 'user' || accountRole===2) {
+          const normalUser: NormalUser = {
+            id: data.account.id,
+            token: data.token,
+            role: 'user',
+            fullName: data.account.fullName,
+            userType: data.account.userType,
+            profileImage: data.account.profileImage || undefined
+          };
+          setUser(normalUser);
+          sessionStorage.setItem('user', JSON.stringify(normalUser));
+          toast.success("Login successful!");
+          navigate("/user/dashboard");
 
-        toast.success("Login successful!");
-        navigate("/user/dashboard");
+        } else if (accountRole === 3 || accountRole === 1) {
+          // Show toast and stop login
+          toast.error("Please use the admin login page");
+          setIsLoading(false);
+          return;
+        } else {
+          toast.error("Invalid role");
+          setIsLoading(false);
+          return;
+        }
       } else {
         toast.error("Invalid user credentials");
+        setIsLoading(false);
       }
-      
-    } catch (err: any) {
-    //  Ab error message backend ka hi show karega
 
-    toast.error(err?.response?.data?.message || "Something went wrong");
-  } finally {
-    setIsLoading(false);
-  }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Something went wrong");
+      setIsLoading(false);
+    }
+
+
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-primary flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -115,7 +127,7 @@ const Login = () => {
             <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center">
               <Home className="h-6 w-6 text-secondary-foreground" />
             </div>
-            <img src="/logo.png" alt="Logo" className="w-24 h-10 bg-gradient-primary rounded-lg object-contain" />
+            <img src="/logo.png" alt="Logo" className="w-20 h-19  rounded-lg object-contain" />
           </Link>
           <p className="text-primary-foreground/80  mt-2">Welcome back to your community</p>
         </div>

@@ -45,6 +45,10 @@ interface Announcement {
   property?: { id: string; name: string } | string;
 }
 
+const isAdminUser = (user: any): user is { properties: number[]; role: string } => {
+  return user && (user.role === 'admin' || user.role === 'super-admin');
+};
+
 const EventManagement = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [usertypes, setUsertypes] = useState<string[]>([]);
@@ -76,6 +80,11 @@ const EventManagement = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const token = user?.token;
+  const { hasPermission } = useAuth();
+
+  const [filterPropertyId, setFilterPropertyId] = useState("all");
+  const [filteredEvents, setFilteredEvents] = useState([]);
+  const [filteredAnnouncements, setFilteredAnnouncements] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -94,10 +103,36 @@ const EventManagement = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         )
       ]);
-      setEvents(eventsRes.data || []);
-      setProperties(propertiesRes.data || []);
-      setUsertypes(usersRes.data)
-      setAnnouncements(announcementRes.data.announcements || []);
+
+      //for event, announcement, property
+
+      let eventData = eventsRes.data || [];
+      let announcementData = announcementRes.data.announcements || [];
+      let propertyData = propertiesRes.data || [];
+
+
+      if (isAdminUser(user) && user.role !== "super-admin") {
+        const accessibleProps = user.properties || [];
+
+        eventData = eventData.filter((e: any) =>
+          e.property?.id && accessibleProps.includes(Number(e.property.id))
+        );
+
+        announcementData = announcementData.filter((a: any) =>
+          a.property?.id && accessibleProps.includes(Number(a.property.id))
+        );
+
+        propertyData = propertyData.filter((p: any) =>
+          accessibleProps.includes(Number(p.id))
+        );
+      }
+
+      setEvents(eventData);
+      setFilteredEvents(eventData);
+      setAnnouncements(announcementData);
+      setFilteredAnnouncements(announcementData);
+      setProperties(propertyData);
+      setUsertypes(usersRes.data);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -109,6 +144,7 @@ const EventManagement = () => {
       setLoading(false);
     }
   };
+
   const validateEventField = (field: string, value: string) => {
     let message = "";
 
@@ -189,11 +225,11 @@ const EventManagement = () => {
         ...eventFormData,
         maxParticipants: eventFormData.maxParticipants ? parseInt(eventFormData.maxParticipants) : null,
         eventDate: eventFormData.eventDate,
-        eventTime: eventFormData.eventTime 
-              ? eventFormData.eventTime.length === 5 
-                ? `${eventFormData.eventTime}:00` // convert "HH:mm" to "HH:mm:ss"
-                : eventFormData.eventTime // already "HH:mm:ss"
-              : null,
+        eventTime: eventFormData.eventTime
+          ? eventFormData.eventTime.length === 5
+            ? `${eventFormData.eventTime}:00` // convert "HH:mm" to "HH:mm:ss"
+            : eventFormData.eventTime // already "HH:mm:ss"
+          : null,
         description: eventFormData.description.trim()
       };
       //define properties for creating events
@@ -225,10 +261,23 @@ const EventManagement = () => {
       resetEventForm();
       fetchData();
       setEventErrors({});
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving event:', error);
-      const errorMessage = error.response?.data?.message || "Failed to save event";
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive', });
+
+      const backendErrors = error.response?.data?.errors; // array from express-validator
+      if (backendErrors && Array.isArray(backendErrors)) {
+        const newEventErrors: any = {};
+        backendErrors.forEach((err: any) => {
+          newEventErrors[err.path] = err.msg;
+        });
+        setEventErrors(newEventErrors); // display under inputs
+        toast({
+          title: "Validation Error", description: backendErrors[0].msg, variant: "destructive",
+        });
+      } else {
+        const errorMessage = error.response?.data?.message || "Failed to save event";
+        toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      }
     }
   }
 
@@ -498,10 +547,12 @@ const EventManagement = () => {
               <CardTitle>Events</CardTitle>
               <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => { resetEventForm(); setSelectedEvent(null); setSelectedEventProperties(""); setEventErrors({}); }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Event
-                  </Button>
+                  {(hasPermission('Event Management', 'write') || hasPermission('Events', 'write')) && (
+                    <Button onClick={() => { resetEventForm(); setSelectedEvent(null); setSelectedEventProperties(""); setEventErrors({}); }}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Event
+                    </Button>
+                  )}
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
@@ -602,60 +653,67 @@ const EventManagement = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Participants</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell className="font-medium">{event.title}</TableCell>
-                    <TableCell>{typeof event.property === "string" ? event.property : event.property?.name}</TableCell>
-                    <TableCell>{new Date(event.eventDate).toLocaleDateString('en-IN')}</TableCell>
-                    <TableCell>
-                      {event.eventTime ? event.eventTime === "00:00:00" ? "00:00" : new Date(`1970-01-01T${event.eventTime}`).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'TBD'
-                      }
-                    </TableCell>
-                    <TableCell>{event.location || 'TBD'}</TableCell>
-                    <TableCell>
-                      {event.maxParticipants}
-                    </TableCell>
-                    <TableCell className="p-1">
-                      <Switch
-                        checked={event.is_active}
-                        onClick={() => handleToggleStatus(event.id, "event")}
-                      >
-                      </Switch>
-                    </TableCell>
-                    <TableCell className="space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => editEvent(event)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteEvent(event.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {(hasPermission('Event Management', 'read') || hasPermission('Events', 'read')) ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Participants</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredEvents.map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell className="font-medium">{event.title}</TableCell>
+                      <TableCell>{typeof event.property === "string" ? event.property : event.property?.name}</TableCell>
+                      <TableCell>{new Date(event.eventDate).toLocaleDateString('en-IN')}</TableCell>
+                      <TableCell>
+                        {event.eventTime ? event.eventTime === "00:00:00" ? "00:00" : new Date(`1970-01-01T${event.eventTime}`).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'TBD'
+                        }
+                      </TableCell>
+                      <TableCell>{event.location || 'TBD'}</TableCell>
+                      <TableCell>
+                        {event.maxParticipants}
+                      </TableCell>
+                      <TableCell className="p-1">
+                        <Switch
+                          checked={event.is_active}
+                          onClick={() => handleToggleStatus(event.id, "event")}
+                        >
+                        </Switch>
+                      </TableCell>
+                      {(hasPermission('Event Management', 'write') || hasPermission('Events', 'write')) && (
+                        <TableCell className="space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => editEvent(event)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteEvent(event.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-red-500 font-bold p-4">Access Denied: You cannot view Events.</div>
+            )}
+
           </CardContent>
         </Card>
 
@@ -666,10 +724,11 @@ const EventManagement = () => {
               <CardTitle>Announcements</CardTitle>
               <Dialog open={isAnnouncementDialogOpen} onOpenChange={setIsAnnouncementDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => { resetAnnouncementForm(); setSelectedAnnouncement(null); setSelectedAnnouncementProperties(""); setAnnouncementErrors({}); }}>
-                    <Bell className="h-4 w-4 mr-2" />
-                    Add Announcement
-                  </Button>
+                  {(hasPermission('Announcements', 'write') || hasPermission('Announcements Management', 'write')) && (
+                    <Button onClick={() => { resetAnnouncementForm(); setSelectedAnnouncement(null); setSelectedAnnouncementProperties(""); setAnnouncementErrors({}); }}>
+                      <Bell className="h-4 w-4 mr-2" />
+                      Add Announcement
+                    </Button>)}
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
@@ -760,57 +819,63 @@ const EventManagement = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Audience</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {announcements.map((announcement) => (
-                  <TableRow key={announcement.id}>
-                    <TableCell className="font-medium">{announcement.title}</TableCell>
-                    <TableCell>{typeof announcement.property === "string" ? announcement.property : announcement.property?.name}</TableCell>
-                    <TableCell>
-                      <Badge variant={announcement.priority === 'urgent' ? 'destructive' : 'secondary'}>
-                        {announcement.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="capitalize">{announcement.audience}</TableCell>
-                    <TableCell>{new Date(announcement.created).toLocaleDateString("en-IN")}</TableCell>
-                    <TableCell className="p-1">
-                      <Switch
-                        checked={announcement.is_active}
-                        onClick={() => handleToggleStatus(announcement.id, "announcement")}
-                      >
-                      </Switch>
-                    </TableCell>
-                    <TableCell className="space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => editAnnouncement(announcement)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteAnnouncement(announcement.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {(hasPermission('Announcements', 'read') || hasPermission('Announcement Management', 'read')) ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Audience</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredAnnouncements.map((announcement) => (
+                    <TableRow key={announcement.id}>
+                      <TableCell className="font-medium">{announcement.title}</TableCell>
+                      <TableCell>{typeof announcement.property === "string" ? announcement.property : announcement.property?.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={announcement.priority === 'urgent' ? 'destructive' : 'secondary'}>
+                          {announcement.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="capitalize">{announcement.audience}</TableCell>
+                      <TableCell>{new Date(announcement.created).toLocaleDateString("en-IN")}</TableCell>
+                      <TableCell className="p-1">
+                        <Switch
+                          checked={announcement.is_active}
+                          onClick={() => handleToggleStatus(announcement.id, "announcement")}
+                        >
+                        </Switch>
+                      </TableCell>
+                      {(hasPermission('Announcements', 'write') || hasPermission('Announcement Management', 'write')) && (
+                        <TableCell className="space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => editAnnouncement(announcement)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteAnnouncement(announcement.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-red-500 font-bold p-4">Access Denied: You cannot view Announcements.</div>
+            )}
           </CardContent>
         </Card>
       </div>

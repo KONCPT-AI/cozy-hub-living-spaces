@@ -95,17 +95,18 @@ const BrowseRooms = () => {
 
   const typeFilters = [
     { label: 'All Types', value: 'all' },
-    { label: 'Single', value: 'single' },
-    { label: 'Shared', value: 'shared' },
-    { label: 'Studio', value: 'studio' },
+    { label: 'single', value: 'single' },
+    { label: '2 sharing', value: '2 sharing' },
+    { label: '3 sharing', value: '3 sharing' },
+    { label: '4 sharing', value: '4 sharing' },
   ];
 
   const priceFilters = [
     { label: 'All Prices', value: 'all' },
-    { label: 'Under $700', value: 'under-700' },
-    { label: '$700 - $900', value: '700-900' },
-    { label: '$900 - $1200', value: '900-1200' },
-    { label: 'Above $1200', value: 'above-1200' },
+    { label: 'Under ₹700', value: 'under-700' },
+    { label: '₹700 - ₹900', value: '700-900' },
+    { label: '₹900 - ₹1200', value: '900-1200' },
+    { label: 'Above ₹1200', value: 'above-1200' },
   ];
 
   const toggleFavorite = (roomId: string) => {
@@ -247,7 +248,7 @@ const BrowseRooms = () => {
 
         {/* Search and Filters */}
         <div className="bg-card p-6 rounded-xl shadow-soft mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -288,11 +289,6 @@ const BrowseRooms = () => {
               ))}
             </select>
 
-            {/* Advanced Filters */}
-            <Button variant="outline" className="flex items-center">
-              <Filter className="h-4 w-4 mr-2" />
-              More Filters
-            </Button>
           </div>
         </div>
 
