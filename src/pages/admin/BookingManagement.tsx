@@ -7,8 +7,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Calendar, Check, X, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import AdminLayout from '@/components/AdminLayout';
-import axios from "axios";
+import axios from 'axios';
+
+const isAdminUser = (user: any): user is { properties: number[]; role: string } => {
+  return user && (user.role === 'admin' || user.role === 'super-admin');
+};
 
 const BookingManagement = () => {
   const [bookings, setBookings] = useState([]);
@@ -16,43 +21,56 @@ const BookingManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const {user, hasPermission } = useAuth();
+  const [filteredBookings, setFilteredBookings] = useState([]);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   useEffect(() => {
-    fetchData();
+    fetchBookings();
   }, []);
 
-  const fetchData = async () => {
+  const fetchBookings = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/admin-booking/getallBookings`);
-      setBookings(res.data.booking || []);
-      setLoading(false);
+      const response = await axios.get(`${API_BASE_URL}/api/admin-booking/getallBookings`);
+      const allBookings = response.data.booking || [];
+      // Filter based on role
+      let bookingsToShow = allBookings;
+      if (user.role !== 'super-admin' && isAdminUser(user)) {
+        const accessibleProps = user.properties || [];
+        bookingsToShow = allBookings.filter(
+          (b) => accessibleProps.includes(b.room?.property?.id)
+        );
+      }
+      setBookings(bookingsToShow);
+      setFilteredBookings(bookingsToShow);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching bookings:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch booking data',
         variant: 'destructive',
       });
+    } finally {
       setLoading(false);
     }
   };
 
   const updateBookingStatus = async (bookingId, status) => {
     try {
-      const endpoint = status === 'approved'
-        ? `${API_BASE_URL}/api/admin-booking/approveBooking/${bookingId}`
-        : `${API_BASE_URL}/api/admin-booking/rejectBooking/${bookingId}`;
+      const endpoint =
+        status === 'approved'
+          ? `${API_BASE_URL}/api/admin-booking/approveBooking/${bookingId}`
+          : `${API_BASE_URL}/api/admin-booking/rejectBooking/${bookingId}`;
 
       await axios.patch(endpoint);
 
       toast({
         title: 'Success',
-        description: `Booking ${status === 'approved' ? 'approved' : 'rejected'} successfully`
+        description: `Booking ${status} successfully`,
       });
 
-      fetchData();
+      fetchBookings();
       setIsDialogOpen(false);
       setSelectedBooking(null);
     } catch (error) {
@@ -67,12 +85,17 @@ const BookingManagement = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'secondary';
+      case 'pending':
+        return 'secondary';
       case 'approved':
-      case 'active': return 'default';
-      case 'rejected': return 'destructive';
-      case 'completed': return 'outline';
-      default: return 'secondary';
+      case 'active':
+        return 'default';
+      case 'rejected':
+        return 'destructive';
+      case 'completed':
+        return 'outline';
+      default:
+        return 'secondary';
     }
   };
 
@@ -87,6 +110,7 @@ const BookingManagement = () => {
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Calendar className="h-8 w-8" />
@@ -128,49 +152,53 @@ const BookingManagement = () => {
             <CardTitle>All Bookings</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Check-in Date</TableHead>
-                  <TableHead>Monthly Rent</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell className="font-medium">{booking.user?.fullName}</TableCell>
-                    <TableCell>{booking.room?.roomNumber}</TableCell>
-                    <TableCell>{booking.room?.property?.name}</TableCell>
-                    <TableCell>{new Date(booking.checkInDate).toLocaleDateString('en-IN')}</TableCell>
-                    <TableCell>₹{ booking.monthlyRent?.toLocaleString() || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(booking.status)}>
-                        {booking.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setIsDialogOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {hasPermission('Booking Management', 'read') ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Check-in Date</TableHead>
+                    <TableHead>Monthly Rent</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredBookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell className="font-medium">{booking.user?.fullName}</TableCell>
+                      <TableCell>{booking.room?.roomNumber}</TableCell>
+                      <TableCell>{booking.room?.property?.name}</TableCell>
+                      <TableCell>{new Date(booking.checkInDate).toLocaleDateString('en-IN')}</TableCell>
+                      <TableCell>₹{booking.monthlyRent?.toLocaleString() || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusColor(booking.status)}>{booking.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {hasPermission('Booking Management', 'read') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setIsDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-red-500 font-bold p-4">Access Denied: You cannot view bookings.</div>
+            )}
 
-            {/* Dialog */}
+            {/* Booking Dialog */}
             {selectedBooking && (
               <Dialog
                 open={isDialogOpen}
@@ -183,70 +211,69 @@ const BookingManagement = () => {
                   <DialogHeader>
                     <DialogTitle>Booking Details</DialogTitle>
                   </DialogHeader>
-
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <div><Label>User</Label></div>
+                        <Label>User</Label>
                         <div className="text-sm text-muted-foreground">{selectedBooking.user?.fullName}</div>
                       </div>
                       <div>
-                        <div><Label>Email </Label></div>
+                        <Label>Email</Label>
                         <div className="text-sm text-muted-foreground">{selectedBooking.user?.email}</div>
                       </div>
                       <div>
-                        <div><Label>Phone </Label></div>
+                        <Label>Phone</Label>
                         <div className="text-sm text-muted-foreground">{selectedBooking.user?.phone}</div>
                       </div>
                       <div>
-                        <div><Label>Room</Label></div>
+                        <Label>Room</Label>
                         <div className="text-sm text-muted-foreground">{selectedBooking.room?.roomNumber}</div>
                       </div>
                       <div>
-                        <div><Label>Check-in Date</Label></div>
+                        <Label>Check-in Date</Label>
                         <div className="text-sm text-muted-foreground">{new Date(selectedBooking.checkInDate).toLocaleDateString('en-IN')}</div>
                       </div>
                       <div>
-                        <div><Label>Check-out Date</Label></div>
+                        <Label>Check-out Date</Label>
                         <div className="text-sm text-muted-foreground">{new Date(selectedBooking.checkOutDate).toLocaleDateString('en-IN')}</div>
                       </div>
                       <div>
-                        <div><Label>Duration</Label></div>
+                        <Label>Duration</Label>
                         <div className="text-sm text-muted-foreground">{selectedBooking.duration} Months</div>
                       </div>
                       <div>
-                        <div><Label>Monthly Rent</Label></div>
+                        <Label>Monthly Rent</Label>
                         <div className="text-sm text-muted-foreground">₹{selectedBooking.monthlyRent?.toLocaleString()}</div>
                       </div>
                       <div>
-                        <div><Label>Status</Label></div>
+                        <Label>Status</Label>
                         <div className="text-sm text-muted-foreground">{selectedBooking.status}</div>
                       </div>
                     </div>
 
-                      {selectedBooking.status === 'pending' && (
-                        <div className="flex space-x-2">
-                          <Button
-                            onClick={() => updateBookingStatus(selectedBooking.id, 'approved')}
-                            className="flex-1"
-                          >
-                            <Check className="h-4 w-4 mr-2" /> Approve
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={() => updateBookingStatus(selectedBooking.id, 'rejected')}
-                            className="flex-1"
-                          >
-                            <X className="h-4 w-4 mr-2" /> Reject
-                          </Button>
-                        </div>
-                      )}
+                    
+                    {selectedBooking.status === 'pending' && 
+                      (user.role === 'super-admin' || hasPermission('Booking Management', 'write')) && (
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={() => updateBookingStatus(selectedBooking.id, 'approved')}
+                          className="flex-1"
+                        >
+                          <Check className="h-4 w-4 mr-2" /> Approve
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => updateBookingStatus(selectedBooking.id, 'rejected')}
+                          className="flex-1"
+                        >
+                          <X className="h-4 w-4 mr-2" /> Reject
+                        </Button>
+                      </div>
+                    )}
                   </div>
-
                 </DialogContent>
               </Dialog>
             )}
-
           </CardContent>
         </Card>
       </div>

@@ -6,18 +6,42 @@ import { Loader2 } from 'lucide-react';
 
 interface ProtectedAdminRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'super_admin' | 'manager' | 'staff';
+  requiredRole?: ('super-admin' | 'admin' )[];
+  requirePermission?: string;
 }
 
-const ProtectedAdminRoute = ({ children, requiredRole }: ProtectedAdminRouteProps) => {
+const ProtectedAdminRoute = ({ children, requiredRole=['super-admin','admin'],requirePermission }: ProtectedAdminRouteProps) => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'admin')) {
-      navigate('/admin-login');
+    if (!isLoading) {
+      if (!user) {
+        navigate('/admin-login');
+        return;
+      }
+      if (!requiredRole.includes(user.role as 'super-admin' | 'admin')) {
+        navigate('/admin-login');
+        return;
+      }
+      //admin permission
+      if (requirePermission && user.role === 'admin') {
+        const adminUser = user as any; // or AdminUser
+
+        if (!adminUser.permission || !adminUser.permission.includes(requirePermission)) {
+          navigate('/admin-login');
+          return;
+        }
+
+        if (requirePermission && adminUser.pages && !adminUser.pages.includes(requirePermission)) {
+        navigate('/admin-login');
+        return;
+      }
+
+      }
+
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading,requiredRole,requirePermission, navigate]);
 
   if (isLoading) {
     return (
@@ -27,10 +51,7 @@ const ProtectedAdminRoute = ({ children, requiredRole }: ProtectedAdminRouteProp
     );
   }
 
-  if (!user || user.role !== 'admin') {
-    return null;
-  }
-
+ 
   return <>{children}</>;
 };
 

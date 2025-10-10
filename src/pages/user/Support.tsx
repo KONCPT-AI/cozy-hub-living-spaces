@@ -245,6 +245,7 @@ const Support = () => {
                           type="date"
                           value={formData.date}
                           onChange={(e) => handleInputChange("date", e.target.value)}
+                          disabled
                         />
                       </div>
                       <div>

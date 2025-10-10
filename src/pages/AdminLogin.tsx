@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useAuth,AdminUser } from '@/contexts/AuthContext';
+import { useAuth, AdminUser } from '@/contexts/AuthContext';
 import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
 import "react-toastify/dist/ReactToastify.css";
 import { toast } from "react-toastify";
 import axios from "axios";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"; 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -18,74 +18,93 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const navigate = useNavigate();
-  const { user,setUser,logout } = useAuth();
+  const { user, setUser, logout } = useAuth();
 
   const validateField = (field: string, value: string, data: { email: string; password: string }) => {
-  let message = "";
+    let message = "";
 
-  if (field === "email") {
-    if (!value.trim()) {
-      message = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      message = "Enter a valid email address";
+    if (field === "email") {
+      if (!value.trim()) {
+        message = "Email is required";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        message = "Enter a valid email address";
+      }
     }
-  }
 
-  if (field === "password") {
-    if (!value) {
-      message = "Password is required";
-    } else if (value.length < 6) {
-      message = "Password must be at least 6 characters";
-    }
-  }
+    // if (field === "password") {
+    //   if (!value) {
+    //     message = "Password is required";
+    //   } else if (value.length < 6) {
+    //     message = "Password must be at least 6 characters";
+    //   }
+    // }
 
-  return message;
-    };
+    return message;
+  };
 
-    const validateForm = (data: { email: string; password: string }) => {
-      const newErrors: { [key: string]: string } = {};
-      Object.keys(data).forEach((field) => {
-        const message = validateField(field, (data as any)[field], data);
-        if (message) newErrors[field] = message;
-      });
-      setErrors(newErrors);
-      return Object.keys(newErrors).length === 0;
-    };
+  const validateForm = (data: { email: string; password: string }) => {
+    const newErrors: { [key: string]: string } = {};
+    Object.keys(data).forEach((field) => {
+      const message = validateField(field, (data as any)[field], data);
+      if (message) newErrors[field] = message;
+    });
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    const handleInputChange = (field: "email" | "password", value: string) => {
-      const updatedData = { email, password, [field]: value };
-      if (field === "email") setEmail(value);
-      if (field === "password") setPassword(value);
+  const handleInputChange = (field: "email" | "password", value: string) => {
+    const updatedData = { email, password, [field]: value };
+    if (field === "email") setEmail(value);
+    if (field === "password") setPassword(value);
 
-      const message = validateField(field, value, updatedData);
-      setErrors((prev) => ({ ...prev, [field]: message }));
-    };
+    const message = validateField(field, value, updatedData);
+    setErrors((prev) => ({ ...prev, [field]: message }));
+  };
 
-  const login=async (email:string, password:string)=>{
-    
-    try{
-        const response = await axios.post(`${API_BASE_URL}/api/common/login`, { email, password });
-        const data=response.data;
+  const login = async (email: string, password: string) => {
 
-        if(data.success && data.account.role === 1){
-          const adminUser:AdminUser={
-            id: data.account.id,
-            token: data.token,
-            role: "admin",
-            userType: ''
-          };
-          setUser(adminUser);
-          sessionStorage.setItem('user', JSON.stringify(adminUser));
-          return true;
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/common/login`, { email, password });
+      const data = response.data;
+
+      if (!data.success) return false;
+
+      //super Admin
+      if (data.account.role === 1) {
+        const superAdmin: AdminUser = {
+          id: data.account.id,
+          token: data.token,
+          role: "super-admin",
+          userType: ''
         }
-        return false
-    }catch(err){
+        setUser(superAdmin);
+        sessionStorage.setItem('user', JSON.stringify(superAdmin));
+        return { account: data.account, role: "super-admin" };
+      }
+
+      //admin
+      if (data.account.role === 3) {
+        const adminUser: AdminUser = {
+          id: data.account.id,
+          token: data.token,
+          role: "admin",
+          userType: data.account.userType,
+          permission: data.permissions || {},
+          pages: data.pages || [],
+          properties: data.properties || []
+        }
+        setUser(adminUser);
+        sessionStorage.setItem('user', JSON.stringify(adminUser));
+        return { account: data.account, pages: data.pages || [], role: "admin" };
+      }
+      return false
+    } catch (err) {
       return false;
     }
   }
 
   const handleLogin = async (e: React.FormEvent) => {
-   e.preventDefault();
+    e.preventDefault();
     setIsLoading(true);
 
     if (!validateForm({ email, password })) {
@@ -94,19 +113,74 @@ const AdminLogin = () => {
     }
 
     const success = await login(email, password);
-    
+
     if (success) {
-      toast.success('Admin Access Granted)');
-      navigate('/admin/dashboard');
+      if (success.account.role === 1) {
+        toast.success("SuperAdmin Access Granted");
+        navigate('/admin/dashboard');
+      } else if (success.account.role === 3) {
+        toast.success("Admin Access Granted");
+
+        const backendPages = success.pages || [];
+        let redirectRoute = "";
+
+        // Helper to extract the page name
+        const getPageName = (page: string | { id: number | string; name?: string }) => {
+          return typeof page === "object" ? page.name : page;
+        };
+
+        // Loop through backendPages to find the first matching route
+        for (const page of backendPages) {
+          const name = getPageName(page);
+
+          if (!name) continue;
+
+          if (name === "User Management") {
+            redirectRoute = "/admin/users";
+            break;
+          } else if (name === "Booking Management" || name === "Bookings") {
+            redirectRoute = "/admin/bookings";
+            break;
+          } else if (name === "Property Management") {
+            redirectRoute = "/admin/properties";
+            break;
+          } else if (name === "Room Management") {
+            redirectRoute = "/admin/rooms";
+            break;
+          } else if (name === "Payments") {
+            redirectRoute = "/admin/payments";
+            break;
+          } else if (name === "Support Tickets") {
+            redirectRoute = "/admin/tickets";
+            break;
+          } else if (name === "Access Logs") {
+            redirectRoute = "/admin/access-logs";
+            break;
+          } else if (name === "Event Management" || name === "Events") {
+            redirectRoute = "/admin/events";
+            break;
+          } else if (name === "Reports") {
+            redirectRoute = "/admin/reports";
+            break;
+          }
+        }
+
+        // Fallback to dashboard if no match
+        if (!redirectRoute) redirectRoute = "/admin/dashboard";
+
+        // Redirect
+        navigate(redirectRoute);
+      }
     } else {
       toast.error("Invalid admin credentials");
+
     }
     setIsLoading(false);
   };
 
   // const handleDemoLogin = async () => {
   //   const success = await login('admin@demo.com', 'admin123');
-    
+
   //   if (success) {
   //     toast({
   //       title: 'Demo Admin Access',
@@ -146,7 +220,7 @@ const AdminLogin = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Current User Warning */}
-            {user && user.role !== 'admin' && (
+            {user && user.role !== 'super-admin' && (
               <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-lg">
                 <div className="flex items-start justify-between">
                   <div className="text-sm">
