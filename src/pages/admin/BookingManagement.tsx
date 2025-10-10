@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,7 @@ const isAdminUser = (user: any): user is { properties: number[]; role: string } 
 
 const BookingManagement = () => {
   const [bookings, setBookings] = useState([]);
+  const navigate = useNavigate();
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -168,7 +170,9 @@ const BookingManagement = () => {
                 <TableBody>
                   {filteredBookings.map((booking) => (
                     <TableRow key={booking.id}>
-                      <TableCell className="font-medium">{booking.user?.fullName}</TableCell>
+                      <TableCell className="font-medium"  onClick={() => navigate(`/admin/users/${booking.user?.id}`)}>
+                        {booking.user?.fullName}
+                      </TableCell>
                       <TableCell>{booking.room?.roomNumber}</TableCell>
                       <TableCell>{booking.room?.property?.name}</TableCell>
                       <TableCell>{new Date(booking.checkInDate).toLocaleDateString('en-IN')}</TableCell>
