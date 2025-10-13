@@ -149,6 +149,23 @@ const PropertyManagement = () => {
        return;
     }
 
+    // Validate total images
+  const oldImagesCount = selectedProperty?.images?.length || 0;
+  const removedCount = formData.removedImages?.length || 0;
+  const newFilesCount = formData.images?.filter(img => img instanceof File).length || 0;
+
+  const totalImages = oldImagesCount - removedCount + newFilesCount;
+
+  if (totalImages > 20) {
+    toast({
+      title: "Error",
+      description: `Cannot upload more than 20 images in total. Currently: ${totalImages}`,
+      variant: "destructive",
+    });
+    setIsLoading(false);
+    return;
+  }
+
     try {
       const dataToSend = new FormData();
         dataToSend.append("name", formData.name.trim());
