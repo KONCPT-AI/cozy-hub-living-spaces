@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Users, Search, Eye, CheckCircle, XCircle, UserPlus } from 'lucide-react';
+import { Users, Search, Eye, CheckCircle, XCircle, EyeOff, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/AdminLayout';
 import axios from 'axios';
@@ -23,7 +23,8 @@ const isAdminUser = (user: any): user is { properties: number[]; role: string } 
 };
 
 const UserManagement = () => {
-  const { user } = useAuth();
+  const { user } = useAuth(); cancelAnimationFrame;
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const [errors, setErrors] = useState<any>({});
   const [users, setUsers] = useState([]);
@@ -408,7 +409,7 @@ const UserManagement = () => {
     }
   };
 
-  
+
   const resetAdminForm = () => {
     setAdminForm({
       email: '',
@@ -423,14 +424,14 @@ const UserManagement = () => {
   };
 
   const usersList = filteredUsers.filter(u => u.userType !== 'admin');
-  const adminsList=admins;
+  const adminsList = admins;
   //for admin view property wise
   // const adminsList = admins.filter(admin => {
   //   if (user.role === 'super-admin') return true;
   //   // admin sees only admins linked to properties they manage
   //   return admin.permission?.properties?.some((pid: number) => accessiblePropertyIds.includes(pid));
   // });
-  
+
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
@@ -599,11 +600,23 @@ const UserManagement = () => {
                     </div>
                     <div>
                       <Label>Password</Label>
-                      <Input
-                        type="password"
-                        value={adminForm.password}
-                        onChange={(e) => handleAdminInputChange('password', e.target.value)}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={adminForm.password}
+                          onChange={(e) => handleAdminInputChange('password', e.target.value)}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+
                       {adminErrors.password && <p className="text-red-500 text-sm">{adminErrors.password}</p>}
                     </div>
                   </div>
@@ -671,7 +684,7 @@ const UserManagement = () => {
 
                   {/* Action Buttons */}
                   <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                    <Button type="button" variant="outline" onClick={() => setIsAddAdminDialogOpen(false)}>
+                    <Button type="button" variant="outline" onClick={() => { setIsAddAdminDialogOpen(false); resetAdminForm(); setSelectedProperties([]); setPermissions({}); }}>
                       Cancel
                     </Button>
                     <Button type="submit">Create Admin</Button>

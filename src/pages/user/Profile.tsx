@@ -34,7 +34,7 @@ import { ToastProvider } from '@radix-ui/react-toast';
 // import { useToast } from '@/hooks/use-toast';
 
 const Profile = () => {
-  const { user, setUser, logout } = useAuth();
+  const { user,updateUserProfile } = useAuth();
   const baseURL = import.meta.env.VITE_API_BASE_URL;
   //   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -123,15 +123,18 @@ const Profile = () => {
         message = "Parent Mobile must be 10 digits.";
       }
     } if (name === "collegeName" || name === "course" || name === "companyName" || name === "position") {
-      const regex = /^[A-Za-z\s&'.\-]{2,100}$/; // letters & common symbols only
-      const onlyDigits = /^\d+$/; //  number check
+  if (value && value.trim() !== "") { // only validate if user entered something
+    const regex = /^[A-Za-z\s&'.\-]{2,100}$/;
+    const onlyDigits = /^\d+$/;
 
-      if (onlyDigits.test(value.trim())) {
-        message = `${name.replace(/([A-Z])/g, ' $1')} cannot be only digits.`;
-      } else if (!regex.test(value.trim())) {
-        message = `${name.replace(/([A-Z])/g, ' $1')} contains invalid characters or is too short/long (2-100 chars).`;
-      }
+    if (onlyDigits.test(value.trim())) {
+      message = `${name.replace(/([A-Z])/g, ' $1')} cannot be only digits.`;
+    } else if (!regex.test(value.trim())) {
+      message = `${name.replace(/([A-Z])/g, ' $1')} contains invalid characters or is too short/long (2-100 chars).`;
     }
+  }
+}
+
     if (name === "allergies") {
       if (value && value.length > 200) {
         message = "Allergies text is too long (max 200 characters).";
@@ -157,6 +160,8 @@ const Profile = () => {
       });
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
+        console.log(newErrors);
+        
         toast.error("Please fix validation errors.");
         return;
       }
@@ -172,7 +177,7 @@ const Profile = () => {
         data.append("profileImage", profileImage);
       }
 
-      await axios.put(`${baseURL}/api/user/update-profile/${user.id}`, data,
+      const res= await axios.put(`${baseURL}/api/user/update-profile/${user.id}`, data,
         {
           headers: {
             Authorization: `Bearer ${user.token}`,
@@ -182,9 +187,12 @@ const Profile = () => {
 
       );
       toast.success("Profile updated successfully!");
+       setFormData(res.data.user);
+        updateUserProfile(res.data.user);
       setIsEditing(false);
       fetchUserProfile(); // refresh with latest
     } catch (error: any) {
+       console.log("Update error:", error.response?.data);
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       } else {

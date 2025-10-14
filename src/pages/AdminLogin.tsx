@@ -334,19 +334,19 @@ const AdminLogin = () => {
                   User Login
                 </Link>
               </div>
-              <Link to="/admin/forgot-password" className="text-sm text-secondary hover:underline block">
+              {/* <Link to="/admin/forgot-password" className="text-sm text-secondary hover:underline block">
                 Forgot admin password?
-              </Link>
+              </Link> */}
             </div>
           </CardContent>
         </Card>
 
         {/* Back to Home */}
-        {/* <div className="text-center mt-6">
+        <div className="text-center mt-6">
           <Link to="/" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors">
             ← Back to Home
           </Link>
-        </div> */}
+        </div>
       </div>
     </div>
   );

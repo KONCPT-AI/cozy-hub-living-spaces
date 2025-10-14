@@ -190,7 +190,22 @@
       setIsLoading(false);
       return;
     }
+ // Validate total images
+  const oldImagesCount = selectedRoom?.images?.length || 0;
+  const removedCount = formData.removedImages?.length || 0;
+  const newFilesCount = formData.images?.filter(img => img instanceof File).length || 0;
 
+  const totalImages = oldImagesCount - removedCount + newFilesCount;
+
+  if (totalImages > 20) {
+    toast({
+      title: "Error",
+      description: `Cannot upload more than 20 images in total. Currently: ${totalImages}`,
+      variant: "destructive",
+    });
+    setIsLoading(false);
+    return;
+  }
       const dataToSend = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
         if (key === 'images') return; // handled separately

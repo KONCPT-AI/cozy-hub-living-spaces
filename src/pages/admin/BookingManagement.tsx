@@ -154,7 +154,7 @@ const BookingManagement = () => {
             <CardTitle>All Bookings</CardTitle>
           </CardHeader>
           <CardContent>
-            {hasPermission('Booking Management', 'read') ? (
+            {(hasPermission('Booking Management', 'read') || hasPermission('Bookings', 'read')) ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -181,7 +181,7 @@ const BookingManagement = () => {
                         <Badge variant={getStatusColor(booking.status)}>{booking.status}</Badge>
                       </TableCell>
                       <TableCell>
-                        {hasPermission('Booking Management', 'read') && (
+                        {(hasPermission('Booking Management', 'read') || hasPermission('Bookings', 'read')) && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -256,8 +256,8 @@ const BookingManagement = () => {
                     </div>
 
                     
-                    {selectedBooking.status === 'pending' && 
-                      (user.role === 'super-admin' || hasPermission('Booking Management', 'write')) && (
+                    {selectedBooking.status === 'pending' && (
+                      (user.role === 'super-admin' || hasPermission('Booking Management', 'write') || hasPermission('Bookings', 'write')) && (
                       <div className="flex space-x-2">
                         <Button
                           onClick={() => updateBookingStatus(selectedBooking.id, 'approved')}
@@ -273,6 +273,7 @@ const BookingManagement = () => {
                           <X className="h-4 w-4 mr-2" /> Reject
                         </Button>
                       </div>
+                      )
                     )}
                   </div>
                 </DialogContent>

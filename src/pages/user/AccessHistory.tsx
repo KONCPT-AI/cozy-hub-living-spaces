@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { Clock, UserCheck, Calendar, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import UserLayout from "@/components/UserLayout";
 
 interface AccessLog {
   id: string;
@@ -123,168 +124,170 @@ export default function AccessHistory() {
   }).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Access History</h1>
-          <p className="text-muted-foreground">View your check-in and check-out records</p>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Entries</p>
-                <p className="text-2xl font-bold text-foreground">{totalEntries}</p>
-              </div>
-              <UserCheck className="w-8 h-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">This Month</p>
-                <p className="text-2xl font-bold text-foreground">{thisMonthEntries}</p>
-              </div>
-              <Calendar className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Late Entries</p>
-                <p className="text-2xl font-bold text-foreground">{lateEntries}</p>
-              </div>
-              <AlertTriangle className="w-8 h-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Date Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filter by Date Range</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div className="space-y-2">
-              <Label htmlFor="start-date">From Date</Label>
-              <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="end-date">To Date</Label>
-              <Input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <button
-                onClick={() => {
-                  setStartDate("");
-                  setEndDate("");
-                }}
-                className="px-4 py-2 text-sm border border-border rounded-md hover:bg-accent transition-colors"
-              >
-                Clear Filters
-              </button>
-            </div>
+     <UserLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Access History</h1>
+            <p className="text-muted-foreground">View your check-in and check-out records</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Access Logs Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCheck className="w-5 h-5" />
-            Your Access Records
-            {lateEntries > 0 && (
-              <Badge className="bg-orange-100 text-orange-800">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                {lateEntries} Late {lateEntries === 1 ? 'Entry' : 'Entries'}
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8">Loading...</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Auth Method</TableHead>
-                  <TableHead>Device</TableHead>
-                  <TableHead>Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {logs.map((log) => (
-                  <TableRow key={log.id} className={log.is_late_entry ? "bg-orange-50" : ""}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {format(new Date(log.timestamp), "MMM dd, yyyy")}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {format(new Date(log.timestamp), "HH:mm:ss")}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {log.properties?.name || "Unknown"}
-                    </TableCell>
-                    <TableCell>
-                      {log.rooms?.room_number || "-"}
-                    </TableCell>
-                    <TableCell>
-                      {getCheckTypeBadge(log.check_type, log.is_late_entry)}
-                    </TableCell>
-                    <TableCell>
-                      {getAuthMethodBadge(log.authentication_method)}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {log.device_id || "-"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {log.notes || "-"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {logs.length === 0 && (
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Entries</p>
+                  <p className="text-2xl font-bold text-foreground">{totalEntries}</p>
+                </div>
+                <UserCheck className="w-8 h-8 text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">This Month</p>
+                  <p className="text-2xl font-bold text-foreground">{thisMonthEntries}</p>
+                </div>
+                <Calendar className="w-8 h-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Late Entries</p>
+                  <p className="text-2xl font-bold text-foreground">{lateEntries}</p>
+                </div>
+                <AlertTriangle className="w-8 h-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Date Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Filter by Date Range</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div className="space-y-2">
+                <Label htmlFor="start-date">From Date</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end-date">To Date</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <button
+                  onClick={() => {
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="px-4 py-2 text-sm border border-border rounded-md hover:bg-accent transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Access Logs Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="w-5 h-5" />
+              Your Access Records
+              {lateEntries > 0 && (
+                <Badge className="bg-orange-100 text-orange-800">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  {lateEntries} Late {lateEntries === 1 ? 'Entry' : 'Entries'}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-8">Loading...</div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No access records found
-                    </TableCell>
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Auth Method</TableHead>
+                    <TableHead>Device</TableHead>
+                    <TableHead>Notes</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log) => (
+                    <TableRow key={log.id} className={log.is_late_entry ? "bg-orange-50" : ""}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {format(new Date(log.timestamp), "MMM dd, yyyy")}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {format(new Date(log.timestamp), "HH:mm:ss")}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {log.properties?.name || "Unknown"}
+                      </TableCell>
+                      <TableCell>
+                        {log.rooms?.room_number || "-"}
+                      </TableCell>
+                      <TableCell>
+                        {getCheckTypeBadge(log.check_type, log.is_late_entry)}
+                      </TableCell>
+                      <TableCell>
+                        {getAuthMethodBadge(log.authentication_method)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {log.device_id || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {log.notes || "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {logs.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No access records found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </UserLayout>
   );
 }
