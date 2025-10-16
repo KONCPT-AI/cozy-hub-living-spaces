@@ -124,7 +124,7 @@ const Register = () => {
     }
     try {
       await axios.post(`${API_BASE_URL}/api/user/send-otp`, { email: formData.email });
-      toast({ title: "OTP Sent", description: "Check your email for verification code" });
+      toast({ title: "OTP Sent", description: "verification code recieve on entered email address" });
       setOtpSent(true);
       setTimeLeft(300); // 5 minutes
     } catch (error: any) {

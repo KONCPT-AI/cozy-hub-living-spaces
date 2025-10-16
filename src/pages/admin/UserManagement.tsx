@@ -46,6 +46,13 @@ const UserManagement = () => {
   const { toast } = useToast();
   const { hasPermission } = useAuth();
   const accessiblePropertyIds = isAdminUser(user) ? user.properties || [] : []; //accessible property i
+  //for pagination
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
+
+  const [adminsPage, setAdminsPage] = useState(1);
+  const [adminsTotalPages, setAdminsTotalPages] = useState(1);
+
 
   const [pages, setPages] = useState<any[]>([]);
   const [admins, setAdmins] = useState([]);
@@ -82,13 +89,16 @@ const UserManagement = () => {
     setFilteredUsers(filtered);
   }, [users, searchTerm]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = 1, limit = 10) => {
     try {
       setIsLoading(true);
-      const { data } = await axios.get(`${API_BASE_URL}/api/user-by-superadmin/getAllUsers`, {
+      const { data } = await axios.get(`${API_BASE_URL}/api/user-by-superadmin/getAllUsers?page=${page}&limit=${limit}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUsers(data || []);
+
+      setUsers(Array.isArray(data.users) ? data.users : [])
+      setUsersTotalPages(data.totalPages || 1); // from backend response
+      setUsersPage(page);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -99,13 +109,16 @@ const UserManagement = () => {
       setIsLoading(false);
     }
   };
-  const fetchAdminUsers = async () => {
+  
+  const fetchAdminUsers = async (page = 1, limit = 10) => {
     try {
       setIsLoading(true);
-      const { data } = await axios.get(`${API_BASE_URL}/api/user-by-superadmin/getAlladminUsers`, {
+      const { data } = await axios.get(`${API_BASE_URL}/api/user-by-superadmin/getAlladminUsers?page=${page}&limit=${limit}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAdmins(data || []);
+      setAdmins(Array.isArray(data.adminUsers) ? data.adminUsers : []);      
+      setAdminsTotalPages(data.totalPages || 1);
+      setAdminsPage(page);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -750,6 +763,26 @@ const UserManagement = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  <div className="flex justify-end items-center mt-4 gap-2">
+                    <Button
+                      size="sm"
+                      disabled={usersPage === 1}
+                      onClick={() => fetchUsers(usersPage - 1)}
+                    >
+                      Previous
+                    </Button>
+
+                    <span>Page {usersPage} of {usersTotalPages}</span>
+
+                    <Button
+                      size="sm"
+                      disabled={usersPage === usersTotalPages}
+                      onClick={() => fetchUsers(usersPage + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+
                 </CardContent>
               </Card>
             </TabsContent>
@@ -837,6 +870,25 @@ const UserManagement = () => {
                       })}
                     </TableBody>
                   </Table>
+                  <div className="flex justify-end items-center mt-4 gap-2">
+                    <Button
+                      size="sm"
+                      disabled={adminsPage === 1}
+                      onClick={() => fetchAdminUsers(adminsPage - 1)}
+                    >
+                      Previous
+                    </Button>
+
+                    <span>Page {adminsPage} of {adminsTotalPages}</span>
+
+                    <Button
+                      size="sm"
+                      disabled={adminsPage === adminsTotalPages}
+                      onClick={() => fetchAdminUsers(adminsPage + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

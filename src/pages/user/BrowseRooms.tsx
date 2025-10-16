@@ -10,11 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Search, 
+import {
+  Search,
   Filter,
-  MapPin, 
-  Users, 
+  MapPin,
+  Users,
   Heart,
   Eye,
   Calendar,
@@ -41,7 +41,7 @@ interface Room {
   occupancy: number;
   floorNumber?: number;
   is_available: boolean;
-  status:string;
+  status: string;
   description?: string;
   amenities?: string[];
   images?: string[];
@@ -65,6 +65,8 @@ const BrowseRooms = () => {
   const [duration, setDuration] = useState('');
   const [bookingNotes, setBookingNotes] = useState('');
   const [isBooking, setIsBooking] = useState(false);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [expandedAmenities, setExpandedAmenities] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const baseURL = import.meta.env.VITE_API_BASE_URL;
@@ -72,34 +74,46 @@ const BrowseRooms = () => {
 
   useEffect(() => {
     fetchRooms();
+    fetchProperties();
   }, []);
 
   const fetchRooms = async () => {
-  try {
-    setLoading(true);
-    const res = await axios.get(`${baseURL}/api/rooms/getall?available=true`);
-    setRooms(res.data.rooms);
-    
-  } catch (error) {
-    console.error('Error fetching rooms:', error);
-    toast({
-      title: "Error",
-      description: "Failed to load rooms. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+      const res = await axios.get(`${baseURL}/api/rooms/getall`);
+      setRooms(res.data.rooms);
 
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load rooms. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const typeFilters = [
-    { label: 'All Types', value: 'all' },
-    { label: 'single', value: 'single' },
-    { label: '2 sharing', value: '2 sharing' },
-    { label: '3 sharing', value: '3 sharing' },
-    { label: '4 sharing', value: '4 sharing' },
-  ];
+  const fetchProperties = async () => {
+      try {
+        const response = await axios.get(`${baseURL}/api/property/getAll`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = response.data.map((p: any) => ({
+          ...p,
+          amenities: typeof p.amenities === "string" ? p.amenities.split(",").map((a: string) => a.trim()) : p.amenities,
+        }));
+        let propertiesToShow = data;
+        setProperties(propertiesToShow);
+      } catch (error) {
+        console.error("Error fetching properties:", error);
+        toast({ title: "Error", description: "Failed to fetch properties", variant: "destructive" });
+      }
+    };
+
+ const uniqueRoomTypes = Array.from(new Set(properties.flatMap(p => p.rateCard?.map((rc:any)=>rc.roomType) || [] )))
+                                .filter(Boolean).sort();
 
   const priceFilters = [
     { label: 'All Prices', value: 'all' },
@@ -110,8 +124,8 @@ const BrowseRooms = () => {
   ];
 
   const toggleFavorite = (roomId: string) => {
-    setFavorites(prev => 
-      prev.includes(roomId) 
+    setFavorites(prev =>
+      prev.includes(roomId)
         ? prev.filter(id => id !== roomId)
         : [...prev, roomId]
     );
@@ -151,18 +165,18 @@ const BrowseRooms = () => {
     setIsBooking(true);
     try {
       const bookingData = {
-      userId: Number(user.id),
-      roomId: Number(selectedRoom.id),
-      checkInDate: checkInDate,
-      monthlyRent: selectedRoom.monthlyRent,
-      duration: duration ? Number(duration) : null,
-      depositAmount: selectedRoom.depositAmount,
-      status: 'pending',
-      notes: bookingNotes || null,
-    };
+        userId: Number(user.id),
+        roomId: Number(selectedRoom.id),
+        checkInDate: checkInDate,
+        monthlyRent: selectedRoom.monthlyRent,
+        duration: duration ? Number(duration) : null,
+        depositAmount: selectedRoom.depositAmount,
+        status: 'pending',
+        notes: bookingNotes || null,
+      };
 
       const res = await axios.post(`${baseURL}/api/book-room/add`, bookingData,
-          { headers: { Authorization: `Bearer ${token}` } })
+        { headers: { Authorization: `Bearer ${token}` } })
 
 
       toast({
@@ -174,7 +188,8 @@ const BrowseRooms = () => {
       setSelectedRoom(null);
       setCheckInDate('');
       setBookingNotes('');
-    } catch (error:any) {
+       fetchRooms();
+    } catch (error: any) {
       const errorMessage = error?.response?.data?.message
       toast({
         title: "Booking Failed",
@@ -183,32 +198,16 @@ const BrowseRooms = () => {
       });
     } finally {
       setIsBooking(false);
-    } 
+    }
   };
 
-  // const nextImage = () => {
-  //   if (selectedRoom?.images && selectedRoom.images.length > 0) {
-  //     setCurrentImageIndex((prev) => 
-  //       prev === selectedRoom.images!.length - 1 ? 0 : prev + 1
-  //     );
-  //   }
-  // };
-
-  // const prevImage = () => {
-  //   if (selectedRoom?.images && selectedRoom.images.length > 0) {
-  //     setCurrentImageIndex((prev) => 
-  //       prev === 0 ? selectedRoom.images!.length - 1 : prev - 1
-  //     );
-  //   }
-  // };
-
   const nextCardImage = (roomId: string, totalImages: number) => {
-  setCardImageIndex(prev => ({
-    ...prev,
-    [roomId]: prev[roomId] === undefined
-      ? 1
-      : (prev[roomId] + 1) % totalImages
-  }));
+    setCardImageIndex(prev => ({
+      ...prev,
+      [roomId]: prev[roomId] === undefined
+        ? 1
+        : (prev[roomId] + 1) % totalImages
+    }));
   };
 
   const prevCardImage = (roomId: string, totalImages: number) => {
@@ -222,16 +221,16 @@ const BrowseRooms = () => {
 
   const filteredRooms = rooms.filter(room => {
     const matchesSearch = room.roomNumber.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (room.description && room.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (room.property.name && room.property.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (room.property.address && room.property.address.toLowerCase().includes(searchTerm.toLowerCase()));
+      (room.description && room.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (room.property.name && room.property.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (room.property.address && room.property.address.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = selectedType === 'all' || room.roomType === selectedType;
-    const matchesPrice = priceRange === 'all' || 
+    const matchesPrice = priceRange === 'all' ||
       (priceRange === 'under-700' && room.monthlyRent < 700) ||
       (priceRange === '700-900' && room.monthlyRent >= 700 && room.monthlyRent <= 900) ||
       (priceRange === '900-1200' && room.monthlyRent > 900 && room.monthlyRent <= 1200) ||
       (priceRange === 'above-1200' && room.monthlyRent > 1200);
-    
+
     return matchesSearch && matchesType && matchesPrice;
   });
 
@@ -261,16 +260,17 @@ const BrowseRooms = () => {
             </div>
 
             {/* Type Filter */}
-            
+
             <select
               aria-label='Room Type'
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              {typeFilters.map(filter => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label}
+              <option value="all">All Types</option>
+              {uniqueRoomTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
                 </option>
               ))}
             </select>
@@ -323,48 +323,47 @@ const BrowseRooms = () => {
         {!loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRooms.map((room) => (
-              
+
               <Card key={room.id} className="overflow-hidden border-0 shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1">
                 <div className="relative">
                   <img src={
-                      room.images && room.images.length > 0
-                        ? `${baseURL}${room.images[cardImageIndex[room.id] || 0]}`
-                        : `https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&h=250&fit=crop`
-                    }
+                    room.images && room.images.length > 0
+                      ? `${baseURL}${room.images[cardImageIndex[room.id] || 0]}`
+                      : `https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&h=250&fit=crop`
+                  }
                     alt={`Room ${room.roomNumber}`}
                     className="w-full h-full object-cover rounded-t-lg"
                   />
 
-                    {room.images && room.images.length > 1 && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-background/80"
-                          onClick={() => prevCardImage(room.id, room.images!.length)}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-background/80"
-                          onClick={() => nextCardImage(room.id, room.images!.length)}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
+                  {room.images && room.images.length > 1 && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-background/80"
+                        onClick={() => prevCardImage(room.id, room.images!.length)}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-background/80"
+                        onClick={() => nextCardImage(room.id, room.images!.length)}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
 
-                        <div className="absolute bottom-2 right-2 bg-background/80 px-2 py-1 rounded text-xs">
-                          {cardImageIndex[room.id] !== undefined ? cardImageIndex[room.id] + 1 : 1} / {room.images.length}
-                        </div>
-                      </>
-                    )}
+                      <div className="absolute bottom-2 right-2 bg-background/80 px-2 py-1 rounded text-xs">
+                        {cardImageIndex[room.id] !== undefined ? cardImageIndex[room.id] + 1 : 1} / {room.images.length}
+                      </div>
+                    </>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`absolute top-2 right-2 h-8 w-8 p-0 bg-background/80 ${
-                      favorites.includes(room.id) ? 'text-red-500' : 'text-muted-foreground'
-                    }`}
+                    className={`absolute top-2 right-2 h-8 w-8 p-0 bg-background/80 ${favorites.includes(room.id) ? 'text-red-500' : 'text-muted-foreground'
+                      }`}
                     onClick={() => toggleFavorite(room.id)}
                   >
                     <Heart className={`h-4 w-4 ${favorites.includes(room.id) ? 'fill-current' : ''}`} />
@@ -378,7 +377,7 @@ const BrowseRooms = () => {
                     </Badge>
                   )}
                 </div>
-                
+
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -394,7 +393,7 @@ const BrowseRooms = () => {
                       {room.roomType}
                     </Badge>
                   </div>
-                  
+
                   <div className="flex items-center text-muted-foreground mb-2">
                     <Users className="h-4 w-4 mr-1" />
                     <span className="text-sm">
@@ -402,32 +401,43 @@ const BrowseRooms = () => {
                       {room.floorNumber && ` • Floor ${room.floorNumber}`}
                     </span>
                   </div>
-                  
-                  {room.description &&  room.description.length>0?(
+
+                  {room.description && room.description.length > 0 ? (
                     <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                       {room.description || 'NA'}
                     </p>
-                  ):(
+                  ) : (
                     <p className="text-gray-400 text-xs mb-4">No description</p>
                   )}
-                  
+
                   {Array.isArray(room.amenities) && room.amenities.length > 0 ? (
                     <div className="flex flex-wrap gap-1 mb-4">
-                      {room.amenities.slice(0, 3).map((amenity: string, index: number) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {amenity}
-                        </Badge>
-                      ))}
+                      {(expandedAmenities === room.id ? room.amenities :
+                        room.amenities.slice(0, 3)).map((amenity: string, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {amenity}
+                          </Badge>
+                        ))}
                       {room.amenities.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{room.amenities.length - 3} more
+                        <Badge
+                          variant="outline"
+                          className="text-xs cursor-pointer hover:bg-secondary hover:text-white"
+                          onClick={() =>
+                            setExpandedAmenities(
+                              expandedAmenities === room.id ? null : room.id
+                            )
+                          }
+                        >
+                          {expandedAmenities === room.id
+                            ? "Show less"
+                            : `+${room.amenities.length - 3} more`}
                         </Badge>
                       )}
                     </div>
-                    ) : (
+                  ) : (
                     <p className="text-gray-400 text-xs mb-4">No amenities</p>
                   )}
-                  
+
                   <div className="flex justify-between items-center">
                     <div>
                       <span className="text-2xl font-bold text-secondary">₹{room.monthlyRent}</span>
@@ -437,15 +447,15 @@ const BrowseRooms = () => {
                       </div>
                     </div>
                     <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleViewRoom(room)}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         View
                       </Button>
-                      <Button 
+                      <Button
                         size="sm"
                         onClick={() => handleBookRoom(room)}
                         disabled={room.status !== "available" || room.occupancy >= room.capacity}
@@ -501,28 +511,28 @@ const BrowseRooms = () => {
                 </Badge>
               </DialogTitle>
             </DialogHeader>
-            
+
             {selectedRoom && (
               <div className="space-y-6">
                 {/* Image Gallery */}
                 <div className="relative">
                   <div className="w-full h-80 rounded-lg overflow-hidden">
-                    <img 
-                      src={selectedRoom.images && selectedRoom.images.length > 0 
-                        ? `${baseURL}${selectedRoom.images[cardImageIndex[selectedRoom.id] || 0]}`
+                    <img
+                      src={selectedRoom.images && selectedRoom.images.length > 0
+                        ? `${baseURL}${selectedRoom.images[currentImageIndex]}`
                         : `https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=400&fit=crop`}
                       alt={`Room ${selectedRoom.roomNumber}`}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  
+
                   {selectedRoom.images && selectedRoom.images.length > 1 && (
                     <>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-background/80"
-                         onClick={() => prevCardImage(selectedRoom?.id!, selectedRoom!.images!.length)}
+                        onClick={() => setCurrentImageIndex((prev) => prev === 0 ? selectedRoom!.images!.length - 1 : prev - 1)}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -530,7 +540,11 @@ const BrowseRooms = () => {
                         variant="ghost"
                         size="sm"
                         className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-background/80"
-                         onClick={() => nextCardImage(selectedRoom?.id!, selectedRoom!.images!.length)}
+                        onClick={() =>
+                          setCurrentImageIndex((prev) =>
+                            prev === selectedRoom!.images!.length - 1 ? 0 : prev + 1
+                          )
+                        }
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -585,7 +599,7 @@ const BrowseRooms = () => {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Availability:</span>
                         <Badge className={selectedRoom.is_available ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                          {selectedRoom.is_available ? 'Available' : 'Occupied'}
+                          {selectedRoom.status === "available" ? 'Available' : 'Occupied'}
                         </Badge>
                       </div>
                       {selectedRoom.preferredUserType && (
@@ -613,30 +627,45 @@ const BrowseRooms = () => {
                 </div>
 
                 {/* Description */}
-                  <div>
-                    <h3 className="text-xl font-semibold mb-3">Description</h3>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {selectedRoom.description || 'No description available.'}
-                    </p>
-                  </div>
-                
+                <div>
+                  <h3 className="text-xl font-semibold mb-3">Description</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {selectedRoom.description || 'No description available.'}
+                  </p>
+                </div>
+
 
                 {/* Amenities */}
-                 {Array.isArray(selectedRoom.amenities) && selectedRoom.amenities.length > 0 && (
-                      <><h3 className="text-xl font-semibold mb-3">Amenities</h3>
-                      <div className="flex flex-wrap gap-1 mb-4">
-                      {selectedRoom.amenities.slice(0, 3).map((amenity, index) => (
+                {Array.isArray(selectedRoom.amenities) && selectedRoom.amenities.length > 0 && (
+                  <>
+                    <h3 className="text-xl font-semibold mb-3">Amenities</h3>
+                    <div className="flex flex-wrap gap-1 mb-4">
+                      {(expandedAmenities === selectedRoom.id
+                        ? selectedRoom.amenities
+                        : selectedRoom.amenities.slice(0, 3)
+                      ).map((amenity, index) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {amenity}
                         </Badge>
                       ))}
+
                       {selectedRoom.amenities.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{selectedRoom.amenities.length - 3} more
+                        <Badge
+                          variant="outline"
+                          className="text-xs cursor-pointer hover:bg-secondary hover:text-white"
+                          onClick={() =>
+                            setExpandedAmenities(
+                              expandedAmenities === selectedRoom.id ? null : selectedRoom.id
+                            )
+                          }
+                        >
+                          {expandedAmenities === selectedRoom.id
+                            ? "Show less"
+                            : `+${selectedRoom.amenities.length - 3} more`}
                         </Badge>
                       )}
-                  
-                  </div></>
+                    </div>
+                  </>
                 )}
 
                 {/* Action Buttons */}
@@ -644,7 +673,7 @@ const BrowseRooms = () => {
                   <Button variant="outline" onClick={() => setShowRoomDetails(false)}>
                     Close
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => {
                       setShowRoomDetails(false);
                       handleBookRoom(selectedRoom);
@@ -666,7 +695,7 @@ const BrowseRooms = () => {
             <DialogHeader>
               <DialogTitle>Book Room {selectedRoom?.roomNumber}</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-4">
               {selectedRoom && (
                 <div className="bg-muted p-4 rounded-lg">
@@ -685,11 +714,11 @@ const BrowseRooms = () => {
                   <div className="flex justify-between font-semibold">
                     <span>Total Payable:</span>
                     <span className="text-secondary">
-                        {checkInDate && duration
-                           ? `₹${selectedRoom.monthlyRent * Number(duration) + selectedRoom.depositAmount}`
-                          : 0}
+                      {checkInDate && duration
+                        ? `₹${selectedRoom.monthlyRent * Number(duration) + selectedRoom.depositAmount}`
+                        : 0}
                     </span>
-                </div>
+                  </div>
                 </div>
               )}
 
@@ -734,14 +763,14 @@ const BrowseRooms = () => {
               </div>
 
               <div className="flex justify-end space-x-3 pt-4 border-t">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setShowBookingModal(false)}
                   disabled={isBooking}
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={submitBooking}
                   disabled={isBooking || !checkInDate}
                 >
