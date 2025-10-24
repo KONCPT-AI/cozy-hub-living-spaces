@@ -137,7 +137,7 @@ const BookingManagement = () => {
           <Card>
             <CardContent className="p-4">
               <div className="text-sm font-medium text-muted-foreground">Active</div>
-              <div className="text-2xl font-bold">{bookings.filter(b => b.status === 'active').length}</div>
+              <div className="text-2xl font-bold">{bookings.filter(b => ['active', 'approved'].includes(b.status)).length}</div>
             </CardContent>
           </Card>
           <Card>

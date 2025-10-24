@@ -55,7 +55,6 @@ const UserDetails = () => {
               <div><p className="font-medium">Phone</p>{userData.phone || 'NA'}</div>
               <div><p className="font-medium">Date of Birth</p>{userData.dateOfBirth || 'NA'}</div>
               <div><p className="font-medium">Occupation</p>{userData.occupation || 'NA'}</div>
-              <div><p className="font-medium">Emergency Contact</p>{userData.emergencyContactName || 'NA'} - {userData.emergencyContactPhone }</div>
               <div><p className="font-medium">KYC Status</p>
                 <Badge variant={userData.kyc_verified ? 'default' : 'destructive'}>
                   {userData.kyc_verified ? 'Verified' : 'Pending'}

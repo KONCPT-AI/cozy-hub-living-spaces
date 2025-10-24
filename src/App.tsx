@@ -46,6 +46,7 @@ import TicketManagement from "./pages/admin/TicketManagement";
 import EventManagement from "./pages/admin/EventManagement";
 import Reports from "./pages/admin/Reports";
 import AccessLogManagement from "./pages/admin/AccessLogManagement";
+import FoodMenuManagement from "./pages/admin/FoodMenuManagement";  
 
 import NotFound from "./pages/NotFound";
 
@@ -173,6 +174,11 @@ const App = () => (
             <Route path="/admin/reports" element={
               <ProtectedAdminRoute>
                 <Reports />
+              </ProtectedAdminRoute>
+            } />
+            <Route path="/admin/food-menu" element={
+              <ProtectedAdminRoute>
+                <FoodMenuManagement />
               </ProtectedAdminRoute>
             } />
             <Route path="/admin/access-logs" element={
