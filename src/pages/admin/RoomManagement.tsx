@@ -195,6 +195,7 @@ const RoomManagement = () => {
       setIsLoading(false);
       return;
     }
+    
     // Validate total images
     const oldImagesCount = selectedRoom?.images?.length || 0;
     const removedCount = formData.removedImages?.length || 0;

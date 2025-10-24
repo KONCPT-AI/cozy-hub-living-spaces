@@ -24,7 +24,7 @@ const TicketManagement = () => {
   const [adminUsers, setAdminUsers] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [assignTo, setAssignTo] = useState('');
+const [assignTo, setAssignTo] = useState<string | null>(null);
   const [newStatus, setNewStatus] = useState('');
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [loading, setLoading] = useState(true);
@@ -37,6 +37,7 @@ const TicketManagement = () => {
 
   useEffect(() => {
     fetchData();
+    fetchAdminUsers();
   }, []);
 
   const fetchData = async () => {
@@ -50,9 +51,10 @@ const TicketManagement = () => {
 
       // If the user is not super-admin, filter tickets based on their assigned properties
       if (user.role !== 'super-admin' && isAdminUser(user)) {
-        const assignedPropertyIds = user.properties || []; // array of property IDs assigned to admin
+        // const assignedPropertyIds = user.properties || []; // array of property IDs assigned to admin
         allTickets = allTickets.filter(ticket =>
-          assignedPropertyIds.includes(ticket.room?.propertyId)
+        //   assignedPropertyIds.includes(ticket.room?.propertyId)
+    String(ticket.assignedTo) === String(user.id)
         );
       }
 
@@ -70,13 +72,26 @@ const TicketManagement = () => {
     }
   };
 
+  const fetchAdminUsers = async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/api/user-by-superadmin/getAlladminUsers`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAdminUsers(data.adminUsers || []);
+
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+    }
+  };
+
+
   const updateTicket = async () => {
     if (!selectedTicket) return;
 
     try {
       const payload = {
         status: newStatus,
-        assignTo: assignTo === 'unassigned' ? null : assignTo,
+        assignedTo: assignTo,
       };
       const response = await axios.put(`${API_BASE_URL}/api/tickets/update-ticket-status/${selectedTicket.id}`, payload,
         { headers: { Authorization: `Bearer ${token}` } })
@@ -101,10 +116,10 @@ const TicketManagement = () => {
   };
 
 
-  const getAdminName = (adminId) => {
-    const admin = adminUsers.find(a => a.user_id === adminId);
-    return admin?.full_name || admin?.email || 'Unassigned';
-  };
+  const getAdminName = (adminId: string | number) => {
+  const admin = adminUsers.find(a => String(a.id) === String(adminId));
+  return admin?.fullName || admin?.email || 'Unassigned';
+};
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -209,7 +224,7 @@ const TicketManagement = () => {
                           {ticket.status?.replace('_', ' ')}
                         </Badge>
                       </TableCell>
-                      <TableCell>{ticket.assigned_to ? getAdminName(ticket.assigned_to) : 'Unassigned'}</TableCell>
+                      <TableCell>{ticket.assignedTo ? getAdminName(ticket.assignedTo) : 'Unassigned'}</TableCell>
                       <TableCell>{new Date(ticket.createdAt).toLocaleDateString('In')}</TableCell>
                       <TableCell>
                         <Dialog open={isDialogOpen && selectedTicket?.id === ticket.id} onOpenChange={(open) => {
@@ -222,19 +237,20 @@ const TicketManagement = () => {
                           }
                         }}>
                           <DialogTrigger asChild>
-                            {hasPermission('Support Tickets', 'write') && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedTicket(ticket);
-                                  setAssignTo(ticket.assigned_to || '');
-                                  setNewStatus(ticket.status);
-                                  setResolutionNotes(ticket.resolution_notes || '');
-                                }}
-                              >
-                                Manage
-                              </Button>)}
+                            {(user.role === "super-admin" || (user.role === "admin" && String(ticket.assignedTo) === String(user.id))) && hasPermission('Support Tickets', 'write')
+                              && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedTicket(ticket);
+                                    setAssignTo(ticket.assignedTo || '');
+                                    setNewStatus(ticket.status);
+                                    setResolutionNotes(ticket.resolution_notes || '');
+                                  }}
+                                >
+                                  Manage
+                                </Button>)}
                           </DialogTrigger>
                           <DialogContent className="max-w-2xl">
                             <DialogHeader>
@@ -257,19 +273,22 @@ const TicketManagement = () => {
                               </div>
                               <div>
                                 <Label htmlFor="assign_to">Assign To</Label>
-                                <Select value={assignTo} onValueChange={setAssignTo}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select admin user" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {adminUsers.map((admin) => (
-                                      <SelectItem key={admin.userId} value={admin.userId}>
-                                        {admin.fullName || admin.email}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+<Select
+  value={assignTo ? String(assignTo) : 'unassigned'}
+  onValueChange={(val: string) => setAssignTo(val === 'unassigned' ? null : val)}
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Select admin user" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="unassigned">Unassigned</SelectItem>
+    {adminUsers.map((admin) => (
+      <SelectItem key={admin.id} value={String(admin.id)}>
+        {admin.fullName || admin.email}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
                               </div>
                               <div>
                                 <Label htmlFor="status">Status</Label>

@@ -11,6 +11,7 @@ import {
   CreditCard, 
   Ticket, 
   PartyPopper, 
+  Utensils,
   BarChart3,
   Shield,
   LogOut,
@@ -48,6 +49,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { name: 'Support Tickets', href: '/admin/tickets', icon: Ticket },
     { name: 'Access Logs', href: '/admin/access-logs', icon: UserCheck },
     { name: 'Events', href: '/admin/events', icon: PartyPopper },
+    { name: 'FoodMenu', href: '/admin/food-menu', icon: Utensils },
     { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
   ];
 
@@ -60,6 +62,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     "Payment Management": "Payments",
     "Support Tickets":"Support Tickets",
     "Event Management": "Events",
+    "FoodMenu":"Food Menu",
     "Reports": "Reports",
     "Dashboard": "Dashboard"
   };
