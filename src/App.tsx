@@ -30,6 +30,7 @@ import Payments from "./pages/user/Payments";
 import Support from "./pages/user/Support";
 import UserEvents from "./pages/user/Events";
 import AccessHistory from "./pages/user/AccessHistory";
+import FoodMenu from "./pages/user/FoodMenu";
 
 // Admin Dashboard Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -42,6 +43,7 @@ import TicketManagement from "./pages/admin/TicketManagement";
 import EventManagement from "./pages/admin/EventManagement";
 import Reports from "./pages/admin/Reports";
 import AccessLogManagement from "./pages/admin/AccessLogManagement";
+import FoodManagement from "./pages/admin/FoodManagement";
 
 import NotFound from "./pages/NotFound";
 
@@ -108,6 +110,11 @@ const App = () => (
                 <AccessHistory />
               </ProtectedUserRoute>
             } />
+            <Route path="/user/food-menu" element={
+              <ProtectedUserRoute>
+                <FoodMenu />
+              </ProtectedUserRoute>
+            } />
 
             {/* Protected Admin Dashboard Routes */}
             <Route path="/admin/dashboard" element={
@@ -158,6 +165,11 @@ const App = () => (
             <Route path="/admin/access-logs" element={
               <ProtectedAdminRoute>
                 <AccessLogManagement />
+              </ProtectedAdminRoute>
+            } />
+            <Route path="/admin/food-management" element={
+              <ProtectedAdminRoute>
+                <FoodManagement />
               </ProtectedAdminRoute>
             } />
 

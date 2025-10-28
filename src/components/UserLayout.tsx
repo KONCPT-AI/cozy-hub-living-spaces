@@ -13,7 +13,8 @@ import {
   LogOut,
   Menu,
   X,
-  Clock
+  Clock,
+  UtensilsCrossed
 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -36,6 +37,7 @@ const UserLayout = ({ children }: UserLayoutProps) => {
     { name: 'My Bookings', href: '/user/bookings', icon: Calendar },
     { name: 'Payments', href: '/user/payments', icon: CreditCard },
     { name: 'Access History', href: '/user/access-history', icon: Clock },
+    { name: 'Food Menu', href: '/user/food-menu', icon: UtensilsCrossed },
     { name: 'Support', href: '/user/support', icon: HeadphonesIcon },
     { name: 'Events', href: '/user/events', icon: PartyPopper },
   ];
